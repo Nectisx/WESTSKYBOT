@@ -1,0 +1,171 @@
+// prisma/schema.prisma
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model GuildConfig {
+  id                  String   @id @default(cuid())
+  guildId             String   @unique
+  logChannelId        String?
+  welcomeChannelId    String?
+  welcomeMessage      String?
+  memberRoleId        String?
+  modRoleId           String?
+  adminRoleId         String?
+  muteRoleId          String?
+  ticketCategoryId    String?
+  suggestionChannelId String?
+  reportChannelId     String?
+  musicChannelId      String?
+  rglChannelId        String?
+  rglMessageId        String?
+  rglRoleId           String?
+  rglMode             String   @default("button")
+  prefix              String   @default("!")
+  language            String   @default("fr")
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+}
+
+model Giveaway {
+  id             String          @id @default(cuid())
+  guildId        String
+  channelId      String
+  messageId      String          @unique
+  prize          String
+  winnersCount   Int             @default(1)
+  endsAt         DateTime
+  endedAt        DateTime?
+  status         String          @default("active")
+  hostId         String
+  requiredRoleId String?
+  bonusRoles     Json            @default("[]")
+  customMessage  String?
+  winners        String[]        @default([])
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  entries        GiveawayEntry[]
+}
+
+model GiveawayEntry {
+  id         String   @id @default(cuid())
+  giveawayId String
+  userId     String
+  tickets    Int      @default(1)
+  joinedAt   DateTime @default(now())
+  giveaway   Giveaway @relation(fields: [giveawayId], references: [id], onDelete: Cascade)
+
+  @@unique([giveawayId, userId])
+}
+
+model InviteStats {
+  id        String   @id @default(cuid())
+  guildId   String
+  userId    String
+  invites   Int      @default(0)
+  fake      Int      @default(0)
+  left      Int      @default(0)
+  bonus     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([guildId, userId])
+}
+
+model InviteRecord {
+  id        String    @id @default(cuid())
+  guildId   String
+  inviterId String?
+  inviteeId String
+  code      String
+  joinedAt  DateTime  @default(now())
+  leftAt    DateTime?
+  fake      Boolean   @default(false)
+}
+
+model ModLog {
+  id        String   @id @default(cuid())
+  guildId   String
+  userId    String
+  modId     String
+  action    String
+  reason    String?
+  duration  Int?
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
+model Warning {
+  id        String   @id @default(cuid())
+  guildId   String
+  userId    String
+  modId     String
+  reason    String
+  createdAt DateTime @default(now())
+}
+
+model UserProfile {
+  id        String    @id @default(cuid())
+  guildId   String
+  userId    String
+  xp        Int       @default(0)
+  level     Int       @default(0)
+  balance   Int       @default(0)
+  lastDaily DateTime?
+  inventory Json      @default("[]")
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@unique([guildId, userId])
+}
+
+model Ticket {
+  id        String    @id @default(cuid())
+  guildId   String
+  channelId String    @unique
+  userId    String
+  status    String    @default("open")
+  subject   String?
+  createdAt DateTime  @default(now())
+  closedAt  DateTime?
+}
+
+model Poll {
+  id        String    @id @default(cuid())
+  guildId   String
+  channelId String
+  messageId String    @unique
+  question  String
+  options   Json
+  endsAt    DateTime?
+  ended     Boolean   @default(false)
+  createdAt DateTime  @default(now())
+}
+
+model Suggestion {
+  id        String   @id @default(cuid())
+  guildId   String
+  messageId String?
+  userId    String
+  content   String
+  status    String   @default("pending")
+  response  String?
+  createdAt DateTime @default(now())
+}
+
+model ShopItem {
+  id          String   @id @default(cuid())
+  guildId     String
+  name        String
+  description String
+  price       Int
+  roleId      String?
+  emoji       String   @default("🛒")
+  stock       Int      @default(-1)
+  createdAt   DateTime @default(now())
+}
