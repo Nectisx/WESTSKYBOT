@@ -98,7 +98,7 @@ class GiveawayManager {
 
     await prisma.giveaway.update({
       where: { id: giveawayId },
-      data: { status: 'ended', endedAt: new Date(), winners },
+      data: { status: 'ended', endedAt: new Date(), winners: JSON.stringify(winners) },
     });
 
     const channel = await this.client.channels.fetch(giveaway.channelId).catch(() => null);

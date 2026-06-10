@@ -4,7 +4,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
@@ -46,7 +46,7 @@ model Giveaway {
   requiredRoleId String?
   bonusRoles     Json            @default("[]")
   customMessage  String?
-  winners        String[]        @default([])
+  winners        String          @default("[]")
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
   entries        GiveawayEntry[]
