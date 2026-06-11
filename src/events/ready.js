@@ -1,6 +1,48 @@
 // src/events/ready.js
+const { REST, Routes, ActivityType } = require('discord.js');
+const fs = require('fs');
+const path = require('path');
 const logger = require('../utils/logger');
-const { ActivityType } = require('discord.js');
+
+async function deployCommands(client) {
+  const commands = [];
+  const commandsPath = path.join(__dirname, '..', 'commands');
+
+  function loadDir(dir) {
+    if (!fs.existsSync(dir)) return;
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        loadDir(full);
+      } else if (entry.name.endsWith('.js') && entry.name !== 'deploy.js') {
+        try {
+          const cmd = require(full);
+          if (cmd.data) commands.push(cmd.data.toJSON());
+        } catch (err) {
+          logger.warn(`Commande ignorée (${entry.name}): ${err.message}`);
+        }
+      }
+    }
+  }
+
+  loadDir(commandsPath);
+
+  const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
+  const clientId = client.application.id;
+  const guildId = process.env.GUILD_ID;
+
+  try {
+    if (guildId) {
+      await rest.put(Routes.applicationGuildCommands(clientId, guildId), { body: commands });
+      logger.info(`✅ ${commands.length} commande(s) déployée(s) sur le serveur (instantané)`);
+    } else {
+      await rest.put(Routes.applicationCommands(clientId), { body: commands });
+      logger.info(`✅ ${commands.length} commande(s) déployée(s) globalement`);
+    }
+  } catch (err) {
+    logger.error(`❌ Erreur déploiement commandes: ${err.message}`);
+  }
+}
 
 module.exports = {
   name: 'ready',
@@ -10,6 +52,9 @@ module.exports = {
     logger.info(`📡 Sur ${client.guilds.cache.size} serveur(s)`);
 
     client.user.setActivity('⚔️ /menu pour commencer', { type: ActivityType.Playing });
+
+    // Déploiement automatique des slash commands
+    await deployCommands(client);
 
     if (client.giveawayManager) {
       await client.giveawayManager.restoreActiveGiveaways();

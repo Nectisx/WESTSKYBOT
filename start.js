@@ -16,11 +16,4 @@ try {
   process.exit(1);
 }
 
-try {
-  execSync('node src/commands/deploy.js', { stdio: 'inherit' });
-} catch (e) {
-  console.error('Erreur deploy commands:', e.message);
-  // On continue même si le déploiement échoue
-}
-
 require('./src/index.js');
