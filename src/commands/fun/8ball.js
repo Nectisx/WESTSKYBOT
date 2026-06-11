@@ -38,7 +38,7 @@ module.exports = {
         { name: '❓ Question', value: question },
         { name: '🔮 Réponse', value: `**${response.text}**` },
       )
-      .setFooter({ text: `⚔️ Fantasy Bot • ${date}` });
+      .setFooter({ text: `⚔️ SOLARA • ${date}` });
 
     await interaction.reply({ embeds: [embed] });
   },

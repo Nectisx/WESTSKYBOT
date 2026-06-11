@@ -19,7 +19,7 @@ module.exports = {
       .setTitle(`🪙 Solde de ${user.tag}`)
       .setDescription(`**${profile.balance} 🪙 pièces d'or**`)
       .setThumbnail(user.displayAvatarURL({ dynamic: true }))
-      .setFooter({ text: `⚔️ Fantasy Bot • ${date}` })
+      .setFooter({ text: `⚔️ SOLARA • ${date}` })
       .setTimestamp();
 
     await interaction.reply({ embeds: [embed] });

@@ -65,7 +65,7 @@ module.exports = {
             .setTitle(`📩 Message de ${interaction.guild.name}`)
             .setDescription(message)
             .setThumbnail(interaction.guild.iconURL({ dynamic: true }))
-            .setFooter({ text: `⚔️ Fantasy Bot • ${date}` });
+            .setFooter({ text: `⚔️ SOLARA • ${date}` });
           await m.send({ embeds: [dmEmbed] });
         } else {
           await m.send({ content: message });
@@ -94,7 +94,7 @@ module.exports = {
           { name: '❌ Échoués (DMs fermés)', value: `${failed}`, inline: true },
           { name: '⏭️ Ignorés (bots)', value: `${interaction.guild.members.cache.size - total - (roleFilter ? 0 : 0)}`, inline: true },
         )
-        .setFooter({ text: `⚔️ Fantasy Bot • ${date}` })
+        .setFooter({ text: `⚔️ SOLARA • ${date}` })
       ],
     });
     logger.info(`dmall: ${sent} envoyés, ${failed} échoués par ${interaction.user.tag}`);

@@ -1,10 +1,14 @@
 // src/events/interactionCreate.js
-const { InteractionType, PermissionFlagsBits } = require('discord.js');
+const { InteractionType, PermissionFlagsBits, EmbedBuilder } = require('discord.js');
 const logger = require('../utils/logger');
 const { errorEmbed, cooldownError } = require('../embeds/errorEmbed');
 const { checkCooldown } = require('../utils/cooldown');
-const { COOLDOWNS } = require('../config/constants');
+const { COOLDOWNS, COLORS } = require('../config/constants');
+const { buildGiveawayEmbed } = require('../embeds/giveawayEmbed');
+const { giveawayRow, participantsNavRow } = require('../components/buttons');
 const prisma = require('../database/prisma');
+
+const PARTICIPANTS_PER_PAGE = 10;
 
 module.exports = {
   name: 'interactionCreate',
@@ -39,34 +43,56 @@ module.exports = {
     if (interaction.isButton()) {
       const customId = interaction.customId;
 
-      // Bouton participer giveaway
       if (customId.startsWith('giveaway_join_')) {
         const giveawayId = customId.replace('giveaway_join_', '');
         await handleGiveawayJoin(interaction, giveawayId, client);
         return;
       }
 
-      // Bouton se retirer giveaway
       if (customId.startsWith('giveaway_leave_')) {
         const giveawayId = customId.replace('giveaway_leave_', '');
-        await handleGiveawayLeave(interaction, giveawayId);
+        await handleGiveawayLeave(interaction, giveawayId, client);
         return;
       }
 
-      // Bouton mes chances giveaway
       if (customId.startsWith('giveaway_info_')) {
         const giveawayId = customId.replace('giveaway_info_', '');
         await handleGiveawayInfo(interaction, giveawayId);
         return;
       }
 
-      // Bouton accepter règlement
+      // Liste des participants (page initiale et navigation)
+      if (customId.startsWith('giveaway_participants_')) {
+        const parts = customId.replace('giveaway_participants_', '').split('_');
+        const page = parseInt(parts.pop(), 10) || 0;
+        const giveawayId = parts.join('_');
+        await handleGiveawayParticipants(interaction, giveawayId, page);
+        return;
+      }
+
+      if (customId.startsWith('giveaway_part_prev_')) {
+        const rest = customId.replace('giveaway_part_prev_', '');
+        const parts = rest.split('_');
+        const currentPage = parseInt(parts.pop(), 10) || 0;
+        const giveawayId = parts.join('_');
+        await handleGiveawayParticipants(interaction, giveawayId, Math.max(0, currentPage - 1));
+        return;
+      }
+
+      if (customId.startsWith('giveaway_part_next_')) {
+        const rest = customId.replace('giveaway_part_next_', '');
+        const parts = rest.split('_');
+        const currentPage = parseInt(parts.pop(), 10) || 0;
+        const giveawayId = parts.join('_');
+        await handleGiveawayParticipants(interaction, giveawayId, currentPage + 1);
+        return;
+      }
+
       if (customId === 'accept_rules') {
         await handleAcceptRules(interaction);
         return;
       }
 
-      // Bouton fermer ticket
       if (customId === 'ticket_close') {
         await handleTicketClose(interaction);
         return;
@@ -98,6 +124,22 @@ module.exports = {
   },
 };
 
+// Met à jour l'embed du giveaway dans le salon
+async function refreshGiveawayEmbed(client, giveaway) {
+  try {
+    const channel = await client.channels.fetch(giveaway.channelId).catch(() => null);
+    if (!channel) return;
+    const msg = await channel.messages.fetch(giveaway.messageId).catch(() => null);
+    if (!msg) return;
+    const count = await prisma.giveawayEntry.count({ where: { giveawayId: giveaway.id } });
+    const embed = buildGiveawayEmbed(giveaway, count);
+    const row = giveawayRow(giveaway.id);
+    await msg.edit({ embeds: [embed], components: [row] }).catch(() => {});
+  } catch (err) {
+    logger.error(`refreshGiveawayEmbed: ${err.message}`);
+  }
+}
+
 async function handleGiveawayJoin(interaction, giveawayId, client) {
   try {
     const giveaway = await prisma.giveaway.findUnique({ where: { id: giveawayId } });
@@ -128,6 +170,10 @@ async function handleGiveawayJoin(interaction, giveawayId, client) {
     }
 
     await prisma.giveawayEntry.create({ data: { giveawayId, userId: interaction.user.id, tickets } });
+
+    // Mise à jour immédiate de l'embed
+    await refreshGiveawayEmbed(client, giveaway);
+
     await interaction.reply({ content: `✅ Tu participes au giveaway **${giveaway.prize}** avec **${tickets}** ticket(s) !`, ephemeral: true });
   } catch (err) {
     logger.error(`handleGiveawayJoin: ${err.message}`);
@@ -135,14 +181,23 @@ async function handleGiveawayJoin(interaction, giveawayId, client) {
   }
 }
 
-async function handleGiveawayLeave(interaction, giveawayId) {
+async function handleGiveawayLeave(interaction, giveawayId, client) {
   try {
+    const giveaway = await prisma.giveaway.findUnique({ where: { id: giveawayId } });
+    if (!giveaway) {
+      return interaction.reply({ embeds: [errorEmbed('Introuvable', 'Giveaway introuvable.')], ephemeral: true });
+    }
+
     const deleted = await prisma.giveawayEntry.deleteMany({
       where: { giveawayId, userId: interaction.user.id },
     });
     if (deleted.count === 0) {
       return interaction.reply({ embeds: [errorEmbed('Non inscrit', 'Tu ne participais pas à ce giveaway.')], ephemeral: true });
     }
+
+    // Mise à jour immédiate de l'embed
+    if (giveaway.status === 'active') await refreshGiveawayEmbed(client, giveaway);
+
     await interaction.reply({ content: '👋 Tu t\'es retiré du giveaway.', ephemeral: true });
   } catch (err) {
     logger.error(`handleGiveawayLeave: ${err.message}`);
@@ -173,6 +228,66 @@ async function handleGiveawayInfo(interaction, giveawayId) {
   } catch (err) {
     logger.error(`handleGiveawayInfo: ${err.message}`);
     await interaction.reply({ content: 'Erreur.', ephemeral: true }).catch(() => {});
+  }
+}
+
+async function handleGiveawayParticipants(interaction, giveawayId, page) {
+  try {
+    const giveaway = await prisma.giveaway.findUnique({ where: { id: giveawayId } });
+    if (!giveaway) {
+      return interaction.reply({ content: 'Giveaway introuvable.', ephemeral: true });
+    }
+
+    const total = await prisma.giveawayEntry.count({ where: { giveawayId } });
+
+    if (total === 0) {
+      return interaction.reply({ content: '👥 Aucun participant pour le moment.', ephemeral: true });
+    }
+
+    const totalPages = Math.ceil(total / PARTICIPANTS_PER_PAGE);
+    const safePage = Math.max(0, Math.min(page, totalPages - 1));
+
+    const entries = await prisma.giveawayEntry.findMany({
+      where: { giveawayId },
+      orderBy: { joinedAt: 'asc' },
+      skip: safePage * PARTICIPANTS_PER_PAGE,
+      take: PARTICIPANTS_PER_PAGE,
+    });
+
+    const date = new Date().toLocaleDateString('fr-FR', {
+      day: '2-digit', month: '2-digit', year: 'numeric',
+      hour: '2-digit', minute: '2-digit',
+    });
+
+    const list = entries.map((e, i) => {
+      const rank = safePage * PARTICIPANTS_PER_PAGE + i + 1;
+      const ticketBadge = e.tickets > 1 ? ` 🎫×${e.tickets}` : '';
+      return `**${rank}.** <@${e.userId}>${ticketBadge}`;
+    }).join('\n');
+
+    const embed = new EmbedBuilder()
+      .setColor(COLORS.PRIMARY)
+      .setTitle(`👥 Participants — ${giveaway.prize}`)
+      .setDescription(list)
+      .addFields({ name: '📊 Total', value: `**${total}** participant(s)`, inline: true })
+      .setFooter({ text: `⚔️ SOLARA • ${date} • Page ${safePage + 1}/${totalPages}` })
+      .setTimestamp();
+
+    const navRow = participantsNavRow(giveawayId, safePage, totalPages);
+
+    if (interaction.replied || interaction.deferred) {
+      await interaction.editReply({ embeds: [embed], components: [navRow] }).catch(() => {});
+    } else {
+      await interaction.reply({ embeds: [embed], components: [navRow], ephemeral: true });
+    }
+  } catch (err) {
+    logger.error(`handleGiveawayParticipants: ${err.message}`);
+    const reply = { content: 'Erreur lors du chargement des participants.', ephemeral: true };
+    if (interaction.replied || interaction.deferred) {
+      await interaction.editReply(reply).catch(() => {});
+    } else {
+      await interaction.reply(reply).catch(() => {});
+    }
   }
 }
 
@@ -228,7 +343,6 @@ async function handleEmbedModal(interaction) {
     const imageUrl = interaction.fields.getTextInputValue('embed_image') || null;
 
     const color = parseInt(colorHex.replace('#', ''), 16) || 0xFFD618;
-    const { EmbedBuilder } = require('discord.js');
     const embed = new EmbedBuilder().setTitle(title).setDescription(description).setColor(color);
     if (imageUrl) embed.setImage(imageUrl);
 

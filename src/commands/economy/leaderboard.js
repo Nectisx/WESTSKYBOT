@@ -22,7 +22,7 @@ module.exports = {
           : entries.map((e, i) => `${medals[i] || `**${i + 1}.**`} <@${e.userId}> — **${e.balance} 🪙**`).join('\n')
       )
       .setThumbnail(interaction.guild.iconURL({ dynamic: true }))
-      .setFooter({ text: `⚔️ Fantasy Bot • ${date}` })
+      .setFooter({ text: `⚔️ SOLARA • ${date}` })
       .setTimestamp();
 
     await interaction.reply({ embeds: [embed] });

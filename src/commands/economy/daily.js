@@ -19,7 +19,7 @@ module.exports = {
         .setTitle('🪙 Récompense quotidienne')
         .setDescription(`Tu as reçu **${DAILY_AMOUNT} 🪙 pièces d'or** !\nSolde total : **${profile.balance} 🪙**`)
         .setThumbnail(interaction.user.displayAvatarURL({ dynamic: true }))
-        .setFooter({ text: `⚔️ Fantasy Bot • ${date} • Reviens demain !` })
+        .setFooter({ text: `⚔️ SOLARA • ${date} • Reviens demain !` })
         .setTimestamp();
       await interaction.reply({ embeds: [embed] });
     } catch (err) {

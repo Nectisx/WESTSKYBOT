@@ -54,7 +54,7 @@ module.exports = {
         .setColor(COLORS.PRIMARY)
         .setTitle(`🎫 Ticket — ${subject}`)
         .setDescription(`Bienvenue ${interaction.user} !\n\nL\'équipe de support va te répondre dès que possible.\nPour fermer ce ticket, clique sur le bouton ci-dessous.`)
-        .setFooter({ text: `⚔️ Fantasy Bot • ${date}` })
+        .setFooter({ text: `⚔️ SOLARA • ${date}` })
         .setTimestamp();
 
       const row = ticketCloseRow();

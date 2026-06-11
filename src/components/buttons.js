@@ -22,7 +22,33 @@ function giveawayRow(giveawayId) {
       .setCustomId(`giveaway_info_${giveawayId}`)
       .setLabel('📊 Mes chances')
       .setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder()
+      .setCustomId(`giveaway_participants_${giveawayId}_0`)
+      .setLabel('👥 Participants')
+      .setStyle(ButtonStyle.Secondary),
   );
+}
+
+function participantsNavRow(giveawayId, page, totalPages) {
+  const row = new ActionRowBuilder();
+  row.addComponents(
+    new ButtonBuilder()
+      .setCustomId(`giveaway_part_prev_${giveawayId}_${page}`)
+      .setLabel('◀ Précédent')
+      .setStyle(ButtonStyle.Secondary)
+      .setDisabled(page === 0),
+    new ButtonBuilder()
+      .setCustomId(`giveaway_participants_${giveawayId}_${page}`)
+      .setLabel(`📄 Page ${page + 1}/${totalPages}`)
+      .setStyle(ButtonStyle.Primary)
+      .setDisabled(true),
+    new ButtonBuilder()
+      .setCustomId(`giveaway_part_next_${giveawayId}_${page}`)
+      .setLabel('Suivant ▶')
+      .setStyle(ButtonStyle.Secondary)
+      .setDisabled(page >= totalPages - 1),
+  );
+  return row;
 }
 
 function acceptRulesRow() {
@@ -43,4 +69,4 @@ function ticketCloseRow() {
   );
 }
 
-module.exports = { confirmRow, giveawayRow, acceptRulesRow, ticketCloseRow };
+module.exports = { confirmRow, giveawayRow, participantsNavRow, acceptRulesRow, ticketCloseRow };

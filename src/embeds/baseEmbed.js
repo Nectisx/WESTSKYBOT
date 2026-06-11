@@ -9,7 +9,7 @@ function createEmbed(color = COLORS.PRIMARY) {
   });
   return new EmbedBuilder()
     .setColor(color)
-    .setFooter({ text: `⚔️ Fantasy Bot • ${date}` })
+    .setFooter({ text: `⚔️ SOLARA • ${date}` })
     .setTimestamp();
 }
 

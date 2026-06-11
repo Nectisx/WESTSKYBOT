@@ -20,7 +20,7 @@ function buildNowPlayingEmbed(track, player) {
       { name: '👤 Ajouté par', value: `<@${track.requestedBy}>`, inline: true },
     )
     .setThumbnail(track.thumbnail || null)
-    .setFooter({ text: `⚔️ Fantasy Bot • ${date}` })
+    .setFooter({ text: `⚔️ SOLARA • ${date}` })
     .setTimestamp();
 }
 
@@ -34,7 +34,7 @@ function buildQueueEmbed(tracks, currentTrack, page, totalPages) {
     .setColor(COLORS.PRIMARY)
     .setTitle(`${EMOJIS.MUSIC} File d'attente`)
     .setDescription(`▶️ **Lecture :** ${currentTrack ? `[${currentTrack.title}](${currentTrack.url})` : 'Rien'}\n\n${list || 'File vide.'}`)
-    .setFooter({ text: `⚔️ Fantasy Bot • ${date} • Page ${page + 1}/${totalPages}` })
+    .setFooter({ text: `⚔️ SOLARA • ${date} • Page ${page + 1}/${totalPages}` })
     .setTimestamp();
 }
 

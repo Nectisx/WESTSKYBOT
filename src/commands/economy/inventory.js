@@ -24,7 +24,7 @@ module.exports = {
           : inventory.map((item, i) => `**${i + 1}.** ${item.name} — acheté <t:${Math.floor(new Date(item.boughtAt).getTime() / 1000)}:R>`).join('\n')
       )
       .setThumbnail(user.displayAvatarURL({ dynamic: true }))
-      .setFooter({ text: `⚔️ Fantasy Bot • ${date}` })
+      .setFooter({ text: `⚔️ SOLARA • ${date}` })
       .setTimestamp();
 
     await interaction.reply({ embeds: [embed] });

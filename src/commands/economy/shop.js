@@ -22,7 +22,7 @@ module.exports = {
             `${item.emoji} **${item.name}** — \`${item.price} 🪙\`\n└ ${item.description}${item.stock > 0 ? ` — Stock: ${item.stock}` : item.stock === 0 ? ' — **Épuisé**' : ''}`
           ).join('\n\n')
       )
-      .setFooter({ text: `⚔️ Fantasy Bot • ${date} • Utilise /buy pour acheter` })
+      .setFooter({ text: `⚔️ SOLARA • ${date} • Utilise /buy pour acheter` })
       .setTimestamp();
 
     await interaction.reply({ embeds: [embed] });

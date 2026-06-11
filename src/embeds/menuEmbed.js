@@ -124,13 +124,13 @@ function buildMainMenuEmbed() {
   });
   return new EmbedBuilder()
     .setColor(COLORS.PRIMARY)
-    .setTitle('⚔️ Fantasy Bot — Menu Principal')
+    .setTitle('⚔️ SOLARA — Menu Principal')
     .setDescription(
-      'Bienvenue dans le panneau de commande du **Fantasy Bot** !\n\n' +
+      'Bienvenue dans le panneau de commande du **SOLARA** !\n\n' +
       'Utilise le menu déroulant ci-dessous pour explorer les différentes catégories de commandes.\n\n' +
       Object.values(categories).map(c => `${c.label}`).join(' • ')
     )
-    .setFooter({ text: `⚔️ Fantasy Bot • ${date}` })
+    .setFooter({ text: `⚔️ SOLARA • ${date}` })
     .setTimestamp();
 }
 
@@ -152,7 +152,7 @@ function buildCategoryEmbed(categoryKey) {
       },
       { name: '🔐 Permissions requises', value: cat.perms },
     )
-    .setFooter({ text: `⚔️ Fantasy Bot • ${date}` })
+    .setFooter({ text: `⚔️ SOLARA • ${date}` })
     .setTimestamp();
 }
 

@@ -25,7 +25,7 @@ module.exports = {
           ? (won ? `✅ Tu as choisi **${choice}** et gagné !` : `❌ Tu as choisi **${choice}** mais c\'est **${result}**. Dommage !`)
           : `Le résultat est **${result}** !`
       )
-      .setFooter({ text: `⚔️ Fantasy Bot • ${date}` });
+      .setFooter({ text: `⚔️ SOLARA • ${date}` });
 
     await interaction.reply({ embeds: [embed] });
   },

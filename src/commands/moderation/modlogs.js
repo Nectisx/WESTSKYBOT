@@ -30,7 +30,7 @@ module.exports = {
             `　📝 ${l.reason || 'Aucune raison'} — <t:${Math.floor(new Date(l.createdAt).getTime() / 1000)}:R>`
           ).join('\n\n')
       )
-      .setFooter({ text: `⚔️ Fantasy Bot • ${date}` });
+      .setFooter({ text: `⚔️ SOLARA • ${date}` });
 
     await interaction.reply({ embeds: [embed], ephemeral: true });
   },

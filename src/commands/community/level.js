@@ -27,7 +27,7 @@ module.exports = {
         { name: '🪙 Pièces d\'or', value: `${profile.balance}`, inline: true },
         { name: '📊 Progression', value: `\`[${progressBar}]\``, inline: false },
       )
-      .setFooter({ text: `⚔️ Fantasy Bot • ${date}` })
+      .setFooter({ text: `⚔️ SOLARA • ${date}` })
       .setTimestamp();
 
     await interaction.reply({ embeds: [embed] });
