@@ -12,20 +12,22 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('ticket')
     .setDescription('Ouvrir un ticket de support')
-    .addStringOption(opt => opt.setName('sujet').setDescription('Sujet du ticket'))
-    .addSubcommand(sub => sub.setName('create').setDescription('Ouvrir un nouveau ticket').addStringOption(opt => opt.setName('sujet').setDescription('Sujet')))
+    .addSubcommand(sub => sub
+      .setName('create')
+      .setDescription('Ouvrir un nouveau ticket')
+      .addStringOption(opt => opt.setName('sujet').setDescription('Sujet du ticket'))
+    )
     .addSubcommand(sub => sub.setName('close').setDescription('Fermer le ticket actuel')),
 
   async execute(interaction) {
-    // Gestion sans sous-commande (appel direct)
-    const sub = interaction.options.getSubcommand(false);
+    const sub = interaction.options.getSubcommand();
 
     const config = await prisma.guildConfig.findUnique({ where: { guildId: interaction.guildId } });
     if (!config?.ticketCategoryId) {
       return interaction.reply({ embeds: [errorEmbed('Non configuré', 'La catégorie tickets n\'est pas configurée. Utilise `/config set`.') ], ephemeral: true });
     }
 
-    if (!sub || sub === 'create') {
+    if (sub === 'create') {
       const subject = interaction.options.getString('sujet') || 'Support général';
 
       const existing = await prisma.ticket.findFirst({
