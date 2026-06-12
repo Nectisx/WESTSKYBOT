@@ -5,6 +5,8 @@ const { successEmbed } = require('../../embeds/baseEmbed');
 const { canModerate } = require('../../utils/permissions');
 const { addModLog } = require('../../services/moderationService');
 const { parseTime, formatDuration } = require('../../utils/timeParser');
+const { buildModEmbed } = require('../../embeds/moderationEmbed');
+const prisma = require('../../database/prisma');
 const logger = require('../../utils/logger');
 
 module.exports = {
@@ -37,6 +39,12 @@ module.exports = {
       await target.timeout(duration * 1000, raison);
       await addModLog(interaction.guildId, targetUser.id, interaction.user.id, 'timeout', raison, duration);
       await interaction.reply({ embeds: [successEmbed(`${targetUser.tag} en timeout`, `**Durée :** ${formatDuration(duration)}\n**Raison :** ${raison}`)] });
+
+      const config = await prisma.guildConfig.findUnique({ where: { guildId: interaction.guildId } });
+      if (config?.logChannelId) {
+        const logCh = await interaction.guild.channels.fetch(config.logChannelId).catch(() => null);
+        if (logCh) await logCh.send({ embeds: [buildModEmbed('timeout', interaction.member, target, raison, { duration: formatDuration(duration) })] }).catch(() => {});
+      }
     } catch (err) {
       logger.error(`timeout: ${err.message}`);
       await interaction.reply({ embeds: [errorEmbed('Erreur', err.message)], ephemeral: true });

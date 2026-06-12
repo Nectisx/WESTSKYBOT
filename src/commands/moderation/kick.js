@@ -4,6 +4,8 @@ const { errorEmbed, permissionError, hierarchyError, botTargetError } = require(
 const { successEmbed } = require('../../embeds/baseEmbed');
 const { canModerate } = require('../../utils/permissions');
 const { addModLog } = require('../../services/moderationService');
+const { buildModEmbed } = require('../../embeds/moderationEmbed');
+const prisma = require('../../database/prisma');
 const logger = require('../../utils/logger');
 
 module.exports = {
@@ -31,6 +33,12 @@ module.exports = {
       await target.kick(raison);
       await addModLog(interaction.guildId, targetUser.id, interaction.user.id, 'kick', raison);
       await interaction.reply({ embeds: [successEmbed(`${targetUser.tag} expulsé`, `**Raison :** ${raison}`)] });
+
+      const config = await prisma.guildConfig.findUnique({ where: { guildId: interaction.guildId } });
+      if (config?.logChannelId) {
+        const logCh = await interaction.guild.channels.fetch(config.logChannelId).catch(() => null);
+        if (logCh) await logCh.send({ embeds: [buildModEmbed('kick', interaction.member, target, raison)] }).catch(() => {});
+      }
     } catch (err) {
       logger.error(`kick: ${err.message}`);
       await interaction.reply({ embeds: [errorEmbed('Erreur', err.message)], ephemeral: true });

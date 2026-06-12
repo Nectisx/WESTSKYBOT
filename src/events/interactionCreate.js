@@ -353,6 +353,52 @@ async function handleTicketClose(interaction) {
     }
 
     await prisma.ticket.update({ where: { channelId: interaction.channelId }, data: { status: 'closed', closedAt: new Date() } });
+
+    const date = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    const openedAt = new Date(ticket.createdAt).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+    const recapEmbed = new EmbedBuilder()
+      .setColor(COLORS.PRIMARY)
+      .setTitle('🎫 Récapitulatif de ton ticket')
+      .addFields(
+        { name: '📂 Catégorie', value: ticket.subject || ticket.category || 'Non précisé', inline: true },
+        { name: '🎮 Pseudo Minecraft', value: ticket.minecraftPseudo || 'Non précisé', inline: true },
+        { name: '​', value: '​', inline: true },
+        { name: '📋 Problème', value: ticket.problem || 'Non précisé', inline: false },
+        { name: '📸 Preuve', value: ticket.hasProof || 'Non précisé', inline: true },
+        { name: '📅 Ouvert le', value: openedAt, inline: true },
+        { name: '🔒 Fermé par', value: `${interaction.user.tag}`, inline: true },
+      )
+      .setFooter({ text: `⚔️ WestSky • ${date}` })
+      .setTimestamp();
+
+    // DM au créateur du ticket
+    const creator = await interaction.guild.members.fetch(ticket.userId).catch(() => null);
+    if (creator) {
+      await creator.user.send({ embeds: [recapEmbed] }).catch(() => {});
+    }
+
+    // Log dans le salon de logs
+    const config = await prisma.guildConfig.findUnique({ where: { guildId: interaction.guildId } });
+    if (config?.logChannelId) {
+      const logCh = await interaction.guild.channels.fetch(config.logChannelId).catch(() => null);
+      if (logCh) {
+        const logEmbed = new EmbedBuilder()
+          .setColor(COLORS.DANGER)
+          .setTitle('🔒 Ticket fermé')
+          .addFields(
+            { name: '👤 Créateur', value: `<@${ticket.userId}>`, inline: true },
+            { name: '🛡️ Fermé par', value: `${interaction.user.tag}`, inline: true },
+            { name: '📂 Catégorie', value: ticket.subject || ticket.category || 'Non précisé', inline: true },
+            { name: '🎮 Pseudo MC', value: ticket.minecraftPseudo || 'Non précisé', inline: true },
+            { name: '📋 Problème', value: (ticket.problem || 'Non précisé').slice(0, 200), inline: false },
+          )
+          .setFooter({ text: `⚔️ WestSky • ${date}` })
+          .setTimestamp();
+        await logCh.send({ embeds: [logEmbed] }).catch(() => {});
+      }
+    }
+
     await interaction.channel.send({ content: '🔒 Ticket fermé. Ce salon sera supprimé dans 5 secondes.' });
     setTimeout(() => interaction.channel.delete().catch(() => {}), 5000);
   } catch (err) {
