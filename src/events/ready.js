@@ -57,7 +57,7 @@ module.exports = {
     if (client.user.username !== 'WestSky') {
       client.user.setUsername('WestSky').catch(err => logger.warn(`Rename bot: ${err.message}`));
     }
-    client.user.edit({ bio: 'PLAY.WESTSKY.FR\nhttps://westsky.fr/' }).catch(err => logger.warn(`Bio bot: ${err.message}`));
+    client.user.edit({ bio: 'PLAY.WESTSKY.FR' }).catch(err => logger.warn(`Bio bot: ${err.message}`));
 
     // Déploiement automatique des slash commands
     await deployCommands(client);
