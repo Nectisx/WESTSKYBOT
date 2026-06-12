@@ -1,25 +1,8 @@
 // src/services/musicService.js
-const MusicPlayer = require('../music/MusicPlayer');
+// Thin helpers — all music logic goes through client.distube directly
 
-const players = new Map();
-
-function getPlayer(guildId) {
-  return players.get(guildId) || null;
+function getQueue(client, guildId) {
+  return client.distube.getQueue(guildId) || null;
 }
 
-function getOrCreatePlayer(guildId) {
-  if (!players.has(guildId)) {
-    players.set(guildId, new MusicPlayer(guildId));
-  }
-  return players.get(guildId);
-}
-
-function destroyPlayer(guildId) {
-  const player = players.get(guildId);
-  if (player) {
-    player.destroy();
-    players.delete(guildId);
-  }
-}
-
-module.exports = { getPlayer, getOrCreatePlayer, destroyPlayer };
+module.exports = { getQueue };

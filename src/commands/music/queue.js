@@ -1,22 +1,19 @@
 // src/commands/music/queue.js
 const { SlashCommandBuilder } = require('discord.js');
 const { errorEmbed } = require('../../embeds/errorEmbed');
-const { buildPaginationRow } = require('../../utils/pagination');
-const { getPlayer } = require('../../services/musicService');
+const { buildQueueEmbed } = require('../../embeds/musicEmbed');
 
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('queue')
     .setDescription('Voir la file d\'attente'),
 
-  async execute(interaction) {
-    const player = getPlayer(interaction.guildId);
-    if (!player || (!player.playing && !player.paused && !player.currentTrack)) {
+  async execute(interaction, client) {
+    const queue = client.distube.getQueue(interaction.guildId);
+    if (!queue || !queue.songs[0]) {
       return interaction.reply({ embeds: [errorEmbed('Aucune lecture', 'Aucune musique en cours.')], ephemeral: true });
     }
-    const embed = player.buildQueueEmbed(0);
-    const totalPages = player.queue.totalPages();
-    const components = totalPages > 1 ? [buildPaginationRow(0, totalPages, 'queue')] : [];
-    await interaction.reply({ embeds: [embed], components });
+    const embed = buildQueueEmbed(queue, 0);
+    await interaction.reply({ embeds: [embed] });
   },
 };
