@@ -1,5 +1,5 @@
 // src/commands/community/ticket.js
-const { SlashCommandBuilder, PermissionFlagsBits, ChannelType, EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder, PermissionFlagsBits, ChannelType, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const { errorEmbed } = require('../../embeds/errorEmbed');
 const { successEmbed } = require('../../embeds/baseEmbed');
 const { ticketCloseRow, ticketPanelSelectRow } = require('../../components/buttons');
@@ -125,10 +125,30 @@ module.exports = {
       if (!ticket) return interaction.reply({ embeds: [errorEmbed('Pas un ticket', 'Ce salon n\'est pas un ticket.')], ephemeral: true });
       const canClose = ticket.userId === interaction.user.id || interaction.member.permissions.has(PermissionFlagsBits.ManageChannels);
       if (!canClose) return interaction.reply({ embeds: [errorEmbed('Permission manquante', 'Tu ne peux pas fermer ce ticket.')], ephemeral: true });
-      await prisma.ticket.update({ where: { channelId: interaction.channelId }, data: { status: 'closed', closedAt: new Date() } });
-      await sendTicketCloseDmAndLog(interaction, ticket);
-      await interaction.reply({ content: '🔒 Ticket fermé. Suppression dans 5 secondes.' });
-      setTimeout(() => interaction.channel.delete().catch(() => {}), 5000);
+
+      const row = new ActionRowBuilder().addComponents(
+        new ButtonBuilder().setCustomId('confirm_ticket_close').setLabel('🔒 Confirmer la fermeture').setStyle(ButtonStyle.Danger),
+        new ButtonBuilder().setCustomId('cancel_ticket_close').setLabel('↩️ Annuler').setStyle(ButtonStyle.Secondary),
+      );
+      const reply = await interaction.reply({
+        content: '⚠️ Es-tu sûr de vouloir fermer ce ticket ?',
+        components: [row],
+        fetchReply: true,
+      });
+
+      try {
+        const btn = await reply.awaitMessageComponent({ filter: i => i.user.id === interaction.user.id, time: 30000 });
+        if (btn.customId === 'confirm_ticket_close') {
+          await prisma.ticket.update({ where: { channelId: interaction.channelId }, data: { status: 'closed', closedAt: new Date() } });
+          await sendTicketCloseDmAndLog(interaction, ticket);
+          await btn.update({ content: '🔒 Ticket fermé. Suppression dans 5 secondes.', components: [] });
+          setTimeout(() => interaction.channel.delete().catch(() => {}), 5000);
+        } else {
+          await btn.update({ content: '↩️ Fermeture annulée.', components: [] });
+        }
+      } catch {
+        await interaction.editReply({ content: '⏰ Temps écoulé. Fermeture annulée.', components: [] });
+      }
     }
   },
 };

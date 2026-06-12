@@ -9,17 +9,18 @@ const logger = require('../utils/logger');
 
 const pendingTimers = new Map(); // `${guildId}_${userId}` → Timer
 
-async function createTempBan(client, guild, targetUser, moderator, reason, durationSeconds) {
+async function createTempBan(client, guild, targetUser, moderator, reason, durationSeconds, type = 'tempkick') {
   const expiresAt = new Date(Date.now() + durationSeconds * 1000);
+  const label = type === 'tempban' ? '[Ban temp]' : '[Expulsion temp]';
 
-  await guild.members.ban(targetUser.id, { reason: `[Expulsion temp] ${reason}` });
+  await guild.members.ban(targetUser.id, { reason: `${label} ${reason}` });
 
   const tempBan = await prisma.tempBan.create({
     data: { guildId: guild.id, userId: targetUser.id, modId: moderator.id, reason, expiresAt },
   });
 
-  await addModLog(guild.id, targetUser.id, moderator.id, 'tempkick', reason, durationSeconds);
-  await _sendActionLog(client, guild.id, moderator, targetUser, reason, durationSeconds, expiresAt);
+  await addModLog(guild.id, targetUser.id, moderator.id, type, reason, durationSeconds);
+  await _sendActionLog(client, guild.id, moderator, targetUser, reason, durationSeconds, expiresAt, type);
 
   _scheduleUnban(client, tempBan.id, guild.id, targetUser.id, durationSeconds);
   return tempBan;
@@ -87,7 +88,7 @@ async function restoreActiveTempBans(client) {
   }
 }
 
-async function _sendActionLog(client, guildId, moderator, target, reason, durationSeconds, expiresAt) {
+async function _sendActionLog(client, guildId, moderator, target, reason, durationSeconds, expiresAt, type = 'tempkick') {
   try {
     const config = await prisma.guildConfig.findUnique({ where: { guildId } });
     if (!config?.logChannelId) return;
@@ -96,13 +97,13 @@ async function _sendActionLog(client, guildId, moderator, target, reason, durati
     const logCh = await guild.channels.fetch(config.logChannelId).catch(() => null);
     if (!logCh) return;
 
-    const embed = buildModEmbed('tempkick', moderator, target, reason, {
+    const embed = buildModEmbed(type, moderator, target, reason, {
       duration: formatDuration(durationSeconds),
       expiresAt: `<t:${Math.floor(expiresAt.getTime() / 1000)}:F>`,
     });
     await logCh.send({ embeds: [embed] }).catch(() => {});
   } catch (err) {
-    logger.error(`_sendActionLog tempkick: ${err.message}`);
+    logger.error(`_sendActionLog ${type}: ${err.message}`);
   }
 }
 
@@ -122,7 +123,7 @@ async function _sendExpireLog(client, guildId, userId, originalReason) {
 
     const embed = new EmbedBuilder()
       .setColor(COLORS.SUCCESS)
-      .setTitle('✅ Expulsion temporaire expirée')
+      .setTitle('✅ Sanction temporaire expirée')
       .addFields(
         { name: '👤 Membre', value: `<@${userId}> (${userId})`, inline: true },
         { name: '🤖 Action', value: 'Débannissement automatique', inline: true },

@@ -5,6 +5,8 @@ const { COLORS, EMOJIS } = require('../config/constants');
 function buildModEmbed(action, moderator, target, reason, extra = {}) {
   const actionColors = {
     ban: COLORS.DANGER,
+    tempban: COLORS.DANGER,
+    tempban_expire: COLORS.SUCCESS,
     softban: COLORS.DANGER,
     kick: COLORS.DEEP,
     tempkick: COLORS.DEEP,
@@ -22,6 +24,8 @@ function buildModEmbed(action, moderator, target, reason, extra = {}) {
   };
   const actionEmojis = {
     ban: '🔨',
+    tempban: '⏰🔨',
+    tempban_expire: '✅',
     softban: '🔨',
     kick: '👢',
     tempkick: '⏰👢',
@@ -39,6 +43,8 @@ function buildModEmbed(action, moderator, target, reason, extra = {}) {
   };
   const actionLabels = {
     ban: 'Bannissement',
+    tempban: 'Ban Temporaire',
+    tempban_expire: 'Ban Temporaire Expiré',
     softban: 'Soft-ban',
     kick: 'Expulsion',
     tempkick: 'Expulsion Temporaire',

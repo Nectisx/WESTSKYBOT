@@ -28,6 +28,7 @@ model GuildConfig {
   rankChannelId       String?
   rankMessageId       String?
   levelChannelId      String?
+  ghostPingChannels   String   @default("[]")
   rglMode             String   @default("button")
   prefix              String   @default("!")
   language            String   @default("fr")
@@ -119,8 +120,9 @@ model UserProfile {
   xp        Int       @default(0)
   level     Int       @default(0)
   balance   Int       @default(0)
-  lastDaily DateTime?
-  inventory String    @default("[]")
+  lastDaily       DateTime?
+  inventory       String    @default("[]")
+  minecraftPseudo String?
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 

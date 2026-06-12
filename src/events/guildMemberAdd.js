@@ -35,6 +35,15 @@ module.exports = {
         }
       }
 
+      // Ghost ping dans les salons configurés
+      const ghostChannels = JSON.parse(config.ghostPingChannels || '[]');
+      for (const chId of ghostChannels) {
+        const ch = await member.guild.channels.fetch(chId).catch(() => null);
+        if (!ch) continue;
+        const msg = await ch.send({ content: `<@${member.id}>` }).catch(() => null);
+        if (msg) setTimeout(() => msg.delete().catch(() => {}), 500);
+      }
+
       if (!config.welcomeChannelId) return;
       const channel = await member.guild.channels.fetch(config.welcomeChannelId).catch(() => null);
       if (!channel) return;

@@ -18,12 +18,15 @@ module.exports = {
       return interaction.reply({ embeds: [errorEmbed('Aucun avertissement', `${targetUser.tag} n'a aucun avertissement.`)], ephemeral: true });
     }
     const date = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    const lines = warns.map((w, i) =>
+      `**${i + 1}.** ${w.reason} — par <@${w.modId}> — <t:${Math.floor(new Date(w.createdAt).getTime() / 1000)}:R>\n> ID : \`${w.id}\``
+    ).join('\n');
     const embed = new EmbedBuilder()
       .setColor(COLORS.SECONDARY)
       .setTitle(`⚠️ Avertissements — ${targetUser.tag}`)
-      .setDescription(warns.map((w, i) => `**${i + 1}.** ${w.reason} — par <@${w.modId}> — <t:${Math.floor(new Date(w.createdAt).getTime() / 1000)}:R>`).join('\n'))
+      .setDescription(lines)
       .setThumbnail(targetUser.displayAvatarURL({ dynamic: true }))
-      .setFooter({ text: `⚔️ WESTSKY • ${date}` });
+      .setFooter({ text: `⚔️ WestSky • ${date} • Utilise /warn remove <id> pour supprimer` });
     await interaction.reply({ embeds: [embed], ephemeral: true });
   },
 };
