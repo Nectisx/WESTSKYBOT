@@ -8,6 +8,10 @@ const { buildGiveawayEmbed } = require('../embeds/giveawayEmbed');
 const { giveawayRow, participantsNavRow, ticketCloseRow } = require('../components/buttons');
 const TICKET_CATEGORIES = require('../config/ticketCategories');
 const prisma = require('../database/prisma');
+const { hasPermission } = require('../services/rolePermissionService');
+
+// Commandes dont l'accès peut être délégué à un rôle
+const DELEGABLE_COMMANDS = ['tempkick', 'ban', 'kick', 'mute', 'unmute', 'warn', 'purge', 'timeout', 'giveaway', 'announce', 'ticket', 'sondage', 'modlogs'];
 
 const PARTICIPANTS_PER_PAGE = 10;
 
@@ -24,6 +28,17 @@ module.exports = {
       const remaining = checkCooldown(interaction.commandName, interaction.user.id, cooldownMs);
       if (remaining > 0) {
         return interaction.reply({ embeds: [cooldownError(remaining)], ephemeral: true });
+      }
+
+      // Vérification permissions rôle délégué
+      if (DELEGABLE_COMMANDS.includes(interaction.commandName)) {
+        const isAdmin = interaction.member.permissions.has(PermissionFlagsBits.Administrator) || interaction.guild.ownerId === interaction.user.id;
+        if (!isAdmin) {
+          const allowed = await hasPermission(interaction.guildId, interaction.member, interaction.commandName).catch(() => false);
+          if (!allowed) {
+            return interaction.reply({ embeds: [errorEmbed('Permission refusée', 'Tu n\'as pas la permission d\'utiliser cette commande.')], ephemeral: true });
+          }
+        }
       }
 
       try {
