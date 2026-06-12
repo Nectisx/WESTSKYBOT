@@ -7,6 +7,8 @@ function buildModEmbed(action, moderator, target, reason, extra = {}) {
     ban: COLORS.DANGER,
     softban: COLORS.DANGER,
     kick: COLORS.DEEP,
+    tempkick: COLORS.DEEP,
+    tempkick_expire: COLORS.SUCCESS,
     mute: COLORS.DEEP,
     timeout: COLORS.DEEP,
     warn: COLORS.SECONDARY,
@@ -22,6 +24,8 @@ function buildModEmbed(action, moderator, target, reason, extra = {}) {
     ban: '🔨',
     softban: '🔨',
     kick: '👢',
+    tempkick: '⏰👢',
+    tempkick_expire: '✅',
     mute: '🔇',
     timeout: '⏰',
     warn: '⚠️',
@@ -37,6 +41,8 @@ function buildModEmbed(action, moderator, target, reason, extra = {}) {
     ban: 'Bannissement',
     softban: 'Soft-ban',
     kick: 'Expulsion',
+    tempkick: 'Expulsion Temporaire',
+    tempkick_expire: 'Expulsion Temporaire Expirée',
     mute: 'Muet',
     timeout: 'Timeout',
     warn: 'Avertissement',
@@ -67,6 +73,7 @@ function buildModEmbed(action, moderator, target, reason, extra = {}) {
     .setTimestamp();
 
   if (extra.duration) embed.addFields({ name: '⏱️ Durée', value: extra.duration, inline: true });
+  if (extra.expiresAt) embed.addFields({ name: '📅 Expiration', value: extra.expiresAt, inline: true });
   if (extra.count) embed.addFields({ name: '🗑️ Messages supprimés', value: `${extra.count}`, inline: true });
 
   return embed;

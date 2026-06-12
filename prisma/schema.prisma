@@ -173,6 +173,19 @@ model Suggestion {
   createdAt DateTime @default(now())
 }
 
+model TempBan {
+  id        String   @id @default(cuid())
+  guildId   String
+  userId    String
+  modId     String
+  reason    String?
+  expiresAt DateTime
+  unbanned  Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([guildId, unbanned])
+}
+
 model ShopItem {
   id          String   @id @default(cuid())
   guildId     String

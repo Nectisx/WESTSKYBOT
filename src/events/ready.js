@@ -62,5 +62,9 @@ module.exports = {
     if (client.inviteTracker) {
       await client.inviteTracker.init();
     }
+
+    // Restaurer les expulsions temporaires actives / expirées pendant l'arrêt
+    const { restoreActiveTempBans } = require('../services/tempBanService');
+    await restoreActiveTempBans(client);
   },
 };
