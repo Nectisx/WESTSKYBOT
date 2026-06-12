@@ -50,7 +50,7 @@ module.exports = {
           { name: '💡 Suggestions', value: config.suggestionChannelId ? `<#${config.suggestionChannelId}>` : 'Non configuré', inline: true },
           { name: '🚨 Signalements', value: config.reportChannelId ? `<#${config.reportChannelId}>` : 'Non configuré', inline: true },
         )
-        .setFooter({ text: `⚔️ WESTSKY • ${date}` });
+        .setFooter({ text: `⚔️ WestSky • ${date}` });
       await interaction.reply({ embeds: [embed], ephemeral: true });
     }
 
@@ -60,6 +60,16 @@ module.exports = {
       const role = interaction.options.getRole('rôle');
       const value = salon?.id || role?.id;
       if (!value) return interaction.reply({ embeds: [errorEmbed('Valeur manquante', 'Fournis un salon ou un rôle.')], ephemeral: true });
+
+      const roleOptions = ['mod_role', 'member_role', 'mute_role'];
+      const channelOptions = ['log_channel', 'welcome_channel', 'ticket_category', 'suggestion_channel', 'report_channel'];
+
+      if (roleOptions.includes(option) && !role) {
+        return interaction.reply({ embeds: [errorEmbed('Rôle requis', `L'option **${option}** nécessite un **rôle**, pas un salon.`)], ephemeral: true });
+      }
+      if (channelOptions.includes(option) && !salon) {
+        return interaction.reply({ embeds: [errorEmbed('Salon requis', `L'option **${option}** nécessite un **salon**, pas un rôle.`)], ephemeral: true });
+      }
 
       const mapping = {
         log_channel: 'logChannelId',
