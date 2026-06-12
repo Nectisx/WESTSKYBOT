@@ -1,11 +1,12 @@
 // src/events/interactionCreate.js
-const { InteractionType, PermissionFlagsBits, EmbedBuilder } = require('discord.js');
+const { InteractionType, PermissionFlagsBits, EmbedBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, ChannelType } = require('discord.js');
 const logger = require('../utils/logger');
 const { errorEmbed, cooldownError } = require('../embeds/errorEmbed');
 const { checkCooldown } = require('../utils/cooldown');
 const { COOLDOWNS, COLORS } = require('../config/constants');
 const { buildGiveawayEmbed } = require('../embeds/giveawayEmbed');
-const { giveawayRow, participantsNavRow } = require('../components/buttons');
+const { giveawayRow, participantsNavRow, ticketCloseRow } = require('../components/buttons');
+const TICKET_CATEGORIES = require('../config/ticketCategories');
 const prisma = require('../database/prisma');
 
 const PARTICIPANTS_PER_PAGE = 10;
@@ -112,12 +113,22 @@ module.exports = {
         }
         return;
       }
+
+      if (interaction.customId === 'ticket_category_select') {
+        await handleTicketCategorySelect(interaction);
+        return;
+      }
     }
 
     // Modals
     if (interaction.type === InteractionType.ModalSubmit) {
       if (interaction.customId === 'modal_create_embed') {
         await handleEmbedModal(interaction);
+        return;
+      }
+
+      if (interaction.customId.startsWith('modal_ticket_open_')) {
+        await handleTicketModal(interaction, client);
         return;
       }
     }
@@ -332,6 +343,147 @@ async function handleTicketClose(interaction) {
   } catch (err) {
     logger.error(`handleTicketClose: ${err.message}`);
     await interaction.reply({ content: 'Erreur fermeture ticket.', ephemeral: true }).catch(() => {});
+  }
+}
+
+async function handleTicketCategorySelect(interaction) {
+  try {
+    const category = interaction.values[0];
+    const cat = TICKET_CATEGORIES.find(c => c.value === category);
+
+    const modal = new ModalBuilder()
+      .setCustomId(`modal_ticket_open_${category}`)
+      .setTitle(`${cat?.emoji || '🎫'} ${cat?.label || 'Ticket'}`);
+
+    modal.addComponents(
+      new ActionRowBuilder().addComponents(
+        new TextInputBuilder()
+          .setCustomId('minecraft_pseudo')
+          .setLabel('Pseudo Minecraft')
+          .setStyle(TextInputStyle.Short)
+          .setPlaceholder('Ton pseudo Minecraft exact...')
+          .setRequired(true)
+          .setMaxLength(64),
+      ),
+      new ActionRowBuilder().addComponents(
+        new TextInputBuilder()
+          .setCustomId('problem')
+          .setLabel('Problème')
+          .setStyle(TextInputStyle.Paragraph)
+          .setPlaceholder('Décris ton problème en détail...')
+          .setRequired(true)
+          .setMaxLength(1024),
+      ),
+      new ActionRowBuilder().addComponents(
+        new TextInputBuilder()
+          .setCustomId('has_proof')
+          .setLabel('Preuve ? (Oui - Screenshot / Oui - Rec / Non)')
+          .setStyle(TextInputStyle.Short)
+          .setPlaceholder('Oui - Screenshot / Oui - Enregistrement / Non')
+          .setRequired(true)
+          .setMaxLength(64),
+      ),
+    );
+
+    await interaction.showModal(modal);
+  } catch (err) {
+    logger.error(`handleTicketCategorySelect: ${err.message}`);
+  }
+}
+
+async function handleTicketModal(interaction, client) {
+  const category = interaction.customId.replace('modal_ticket_open_', '');
+  const cat = TICKET_CATEGORIES.find(c => c.value === category);
+
+  const minecraftPseudo = interaction.fields.getTextInputValue('minecraft_pseudo');
+  const problem = interaction.fields.getTextInputValue('problem');
+  const hasProof = interaction.fields.getTextInputValue('has_proof');
+
+  await interaction.deferReply({ ephemeral: true });
+
+  try {
+    const config = await prisma.guildConfig.findUnique({ where: { guildId: interaction.guildId } });
+    if (!config?.ticketCategoryId) {
+      return interaction.editReply({ content: '⚠️ La catégorie tickets n\'est pas configurée. Un admin doit faire `/config set ticket_category`.' });
+    }
+
+    const existing = await prisma.ticket.findFirst({
+      where: { guildId: interaction.guildId, userId: interaction.user.id, status: 'open' },
+    });
+    if (existing) {
+      return interaction.editReply({ content: `❌ Tu as déjà un ticket ouvert : <#${existing.channelId}>` });
+    }
+
+    const date = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    const channelName = `${category.replace('_', '-')}-${interaction.user.username.slice(0, 12).toLowerCase()}`;
+
+    const permOverwrites = [
+      { id: interaction.guildId, deny: [PermissionFlagsBits.ViewChannel] },
+      { id: interaction.user.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages] },
+    ];
+    if (config.modRoleId) permOverwrites.push({ id: config.modRoleId, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages] });
+    if (config.adminRoleId) permOverwrites.push({ id: config.adminRoleId, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages] });
+
+    const channel = await interaction.guild.channels.create({
+      name: channelName,
+      type: ChannelType.GuildText,
+      parent: config.ticketCategoryId,
+      permissionOverwrites: permOverwrites,
+    });
+
+    const embed = new EmbedBuilder()
+      .setColor(COLORS.PRIMARY)
+      .setTitle(`🎫 Ticket — ${cat?.label || category}`)
+      .setDescription(`Bienvenue ${interaction.user} !\nNotre équipe va te répondre dès que possible.\nUtilise le bouton ci-dessous pour fermer ce ticket.`)
+      .addFields(
+        { name: '📂 Catégorie', value: cat?.label || category, inline: true },
+        { name: '🎮 Pseudo Minecraft', value: minecraftPseudo, inline: true },
+        { name: '​', value: '​', inline: true },
+        { name: '📋 Problème', value: problem, inline: false },
+        { name: '📸 Preuve', value: hasProof, inline: true },
+      )
+      .setFooter({ text: `⚔️ SOLARA • ${date}` })
+      .setTimestamp();
+
+    const closeRow = ticketCloseRow();
+    await channel.send({ content: interaction.user.toString(), embeds: [embed], components: [closeRow] });
+
+    await prisma.ticket.create({
+      data: {
+        guildId: interaction.guildId,
+        channelId: channel.id,
+        userId: interaction.user.id,
+        subject: cat?.label || category,
+        category,
+        minecraftPseudo,
+        problem,
+        hasProof,
+      },
+    });
+
+    if (config.logChannelId) {
+      const logChannel = await interaction.guild.channels.fetch(config.logChannelId).catch(() => null);
+      if (logChannel) {
+        const logEmbed = new EmbedBuilder()
+          .setColor(COLORS.PRIMARY)
+          .setTitle('🎫 Nouveau ticket ouvert')
+          .addFields(
+            { name: 'Utilisateur', value: `${interaction.user.tag} (<@${interaction.user.id}>)`, inline: true },
+            { name: 'Catégorie', value: cat?.label || category, inline: true },
+            { name: 'Pseudo MC', value: minecraftPseudo, inline: true },
+            { name: 'Preuve', value: hasProof, inline: true },
+            { name: 'Salon', value: `<#${channel.id}>`, inline: true },
+          )
+          .setTimestamp();
+        await logChannel.send({ embeds: [logEmbed] }).catch(() => {});
+      }
+    }
+
+    await interaction.editReply({ content: `✅ Ton ticket a été créé : <#${channel.id}>` });
+    logger.info(`[Ticket] Ticket créé par ${interaction.user.tag} — catégorie: ${category}`);
+  } catch (err) {
+    logger.error(`handleTicketModal: ${err.message}`);
+    await interaction.editReply({ content: `❌ Erreur lors de la création du ticket : ${err.message}` }).catch(() => {});
   }
 }
 

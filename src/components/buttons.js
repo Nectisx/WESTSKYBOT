@@ -1,5 +1,6 @@
 // src/components/buttons.js
-const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { ActionRowBuilder, ButtonBuilder, ButtonStyle, StringSelectMenuBuilder } = require('discord.js');
+const TICKET_CATEGORIES = require('../config/ticketCategories');
 
 function confirmRow(confirmId, cancelId, confirmLabel = '✅ Confirmer', cancelLabel = '❌ Annuler') {
   return new ActionRowBuilder().addComponents(
@@ -51,6 +52,19 @@ function participantsNavRow(giveawayId, page, totalPages) {
   return row;
 }
 
+function ticketPanelSelectRow() {
+  return new ActionRowBuilder().addComponents(
+    new StringSelectMenuBuilder()
+      .setCustomId('ticket_category_select')
+      .setPlaceholder('📂 Choisissez une catégorie...')
+      .addOptions(TICKET_CATEGORIES.map(c => ({
+        label: c.label,
+        value: c.value,
+        description: c.description,
+      }))),
+  );
+}
+
 function acceptRulesRow() {
   return new ActionRowBuilder().addComponents(
     new ButtonBuilder()
@@ -69,4 +83,4 @@ function ticketCloseRow() {
   );
 }
 
-module.exports = { confirmRow, giveawayRow, participantsNavRow, acceptRulesRow, ticketCloseRow };
+module.exports = { confirmRow, giveawayRow, participantsNavRow, ticketPanelSelectRow, acceptRulesRow, ticketCloseRow };

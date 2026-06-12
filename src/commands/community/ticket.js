@@ -1,73 +1,83 @@
 // src/commands/community/ticket.js
-const { SlashCommandBuilder, PermissionFlagsBits, ChannelType } = require('discord.js');
+const { SlashCommandBuilder, PermissionFlagsBits, ChannelType, EmbedBuilder } = require('discord.js');
 const { errorEmbed } = require('../../embeds/errorEmbed');
 const { successEmbed } = require('../../embeds/baseEmbed');
-const { ticketCloseRow } = require('../../components/buttons');
+const { ticketCloseRow, ticketPanelSelectRow } = require('../../components/buttons');
 const prisma = require('../../database/prisma');
 const { COLORS } = require('../../config/constants');
-const { EmbedBuilder } = require('discord.js');
+const TICKET_CATEGORIES = require('../../config/ticketCategories');
 const logger = require('../../utils/logger');
 
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('ticket')
-    .setDescription('Ouvrir un ticket de support')
+    .setDescription('Système de tickets')
     .addSubcommand(sub => sub
-      .setName('create')
-      .setDescription('Ouvrir un nouveau ticket')
-      .addStringOption(opt => opt.setName('sujet').setDescription('Sujet du ticket'))
+      .setName('setup')
+      .setDescription('Créer le panneau de tickets dans un salon')
+      .addChannelOption(opt => opt
+        .setName('salon')
+        .setDescription('Salon où afficher le panneau de tickets')
+        .addChannelTypes(ChannelType.GuildText)
+        .setRequired(true)
+      )
+      .addStringOption(opt => opt
+        .setName('titre')
+        .setDescription('Titre de l\'embed du panneau')
+        .setRequired(false)
+      )
     )
     .addSubcommand(sub => sub.setName('close').setDescription('Fermer le ticket actuel')),
 
   async execute(interaction) {
     const sub = interaction.options.getSubcommand();
 
-    const config = await prisma.guildConfig.findUnique({ where: { guildId: interaction.guildId } });
-    if (!config?.ticketCategoryId) {
-      return interaction.reply({ embeds: [errorEmbed('Non configuré', 'La catégorie tickets n\'est pas configurée. Utilise `/config set`.') ], ephemeral: true });
-    }
-
-    if (sub === 'create') {
-      const subject = interaction.options.getString('sujet') || 'Support général';
-
-      const existing = await prisma.ticket.findFirst({
-        where: { guildId: interaction.guildId, userId: interaction.user.id, status: 'open' },
-      });
-      if (existing) {
-        return interaction.reply({ embeds: [errorEmbed('Ticket existant', `Tu as déjà un ticket ouvert : <#${existing.channelId}>`)], ephemeral: true });
+    if (sub === 'setup') {
+      if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
+        return interaction.reply({ embeds: [errorEmbed('Permission manquante', 'Tu dois être administrateur pour utiliser cette commande.')], ephemeral: true });
       }
 
+      const channel = interaction.options.getChannel('salon');
+      const title = interaction.options.getString('titre') || '🎫 Ouvrir un ticket';
       const date = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 
-      const channel = await interaction.guild.channels.create({
-        name: `ticket-${interaction.user.username.slice(0, 15).toLowerCase()}`,
-        type: ChannelType.GuildText,
-        parent: config.ticketCategoryId,
-        permissionOverwrites: [
-          { id: interaction.guildId, deny: [PermissionFlagsBits.ViewChannel] },
-          { id: interaction.user.id, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages] },
-          ...(config.modRoleId ? [{ id: config.modRoleId, allow: [PermissionFlagsBits.ViewChannel, PermissionFlagsBits.SendMessages] }] : []),
-        ],
-      });
+      const categoryList = TICKET_CATEGORIES.map(c => `${c.emoji} **${c.label.replace(/[^ -~À-ɏ\u{1F000}-\u{1FFFF}]/gu, '')}**`).join('\n');
 
       const embed = new EmbedBuilder()
         .setColor(COLORS.PRIMARY)
-        .setTitle(`🎫 Ticket — ${subject}`)
-        .setDescription(`Bienvenue ${interaction.user} !\n\nL\'équipe de support va te répondre dès que possible.\nPour fermer ce ticket, clique sur le bouton ci-dessous.`)
+        .setTitle(title)
+        .setDescription(
+          'Sélectionne une catégorie dans le menu ci-dessous pour ouvrir un ticket.\n' +
+          'Notre équipe de support te répondra dans les plus brefs délais.\n\n' +
+          '**Catégories disponibles :**\n' +
+          TICKET_CATEGORIES.map(c => `${c.emoji} **${c.label.split(' ').slice(1).join(' ')}** — ${c.description}`).join('\n')
+        )
         .setFooter({ text: `⚔️ SOLARA • ${date}` })
         .setTimestamp();
 
-      const row = ticketCloseRow();
-      await channel.send({ content: interaction.user.toString(), embeds: [embed], components: [row] });
+      const row = ticketPanelSelectRow();
 
-      await prisma.ticket.create({
-        data: { guildId: interaction.guildId, channelId: channel.id, userId: interaction.user.id, subject },
-      });
+      await interaction.deferReply({ ephemeral: true });
 
-      await interaction.reply({ embeds: [successEmbed('Ticket créé', `Ton ticket a été créé : <#${channel.id}>`)], ephemeral: true });
+      try {
+        const msg = await channel.send({ embeds: [embed], components: [row] });
+
+        await prisma.ticketPanel.upsert({
+          where: { guildId: interaction.guildId },
+          update: { channelId: channel.id, messageId: msg.id, title },
+          create: { guildId: interaction.guildId, channelId: channel.id, messageId: msg.id, title },
+        });
+
+        await interaction.editReply({ content: `✅ Panneau de tickets créé dans ${channel} !` });
+        logger.info(`[Ticket] Panneau créé dans #${channel.name} par ${interaction.user.tag}`);
+      } catch (err) {
+        logger.error(`[Ticket setup] ${err.message}`);
+        await interaction.editReply({ content: `❌ Erreur lors de la création du panneau : ${err.message}` });
+      }
+      return;
     }
 
-    else if (sub === 'close') {
+    if (sub === 'close') {
       const ticket = await prisma.ticket.findUnique({ where: { channelId: interaction.channelId } });
       if (!ticket) return interaction.reply({ embeds: [errorEmbed('Pas un ticket', 'Ce salon n\'est pas un ticket.')], ephemeral: true });
       const canClose = ticket.userId === interaction.user.id || interaction.member.permissions.has(PermissionFlagsBits.ManageChannels);

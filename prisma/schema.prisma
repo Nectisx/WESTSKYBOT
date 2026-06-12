@@ -125,14 +125,27 @@ model UserProfile {
 }
 
 model Ticket {
-  id        String    @id @default(cuid())
-  guildId   String
-  channelId String    @unique
-  userId    String
-  status    String    @default("open")
-  subject   String?
-  createdAt DateTime  @default(now())
-  closedAt  DateTime?
+  id              String    @id @default(cuid())
+  guildId         String
+  channelId       String    @unique
+  userId          String
+  status          String    @default("open")
+  subject         String?
+  category        String?
+  minecraftPseudo String?
+  problem         String?
+  hasProof        String?
+  createdAt       DateTime  @default(now())
+  closedAt        DateTime?
+}
+
+model TicketPanel {
+  id        String   @id @default(cuid())
+  guildId   String   @unique
+  channelId String
+  messageId String
+  title     String   @default("🎫 Ouvrir un ticket")
+  createdAt DateTime @default(now())
 }
 
 model Poll {
