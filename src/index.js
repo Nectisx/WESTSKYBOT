@@ -2,7 +2,6 @@
 require('dotenv').config();
 const { Client, GatewayIntentBits, Partials, Collection } = require('discord.js');
 const { DisTube } = require('distube');
-const { YtDlCorePlugin } = require('@distube/ytdl-core');
 const logger = require('./utils/logger');
 const { loadCommands, loadEvents } = require('./utils/commandLoader');
 const GiveawayManager = require('./giveaways/GiveawayManager');
@@ -29,7 +28,6 @@ client.commands = new Collection();
 
 // DisTube music engine
 client.distube = new DisTube(client, {
-  plugins: [new YtDlCorePlugin()],
   emitNewSongOnly: false,
   joinNewVoiceChannel: false,
   nsfw: false,
