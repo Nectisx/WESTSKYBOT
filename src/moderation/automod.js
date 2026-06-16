@@ -44,7 +44,11 @@ async function applyAutoMute(message, reason) {
       const logCh = await message.guild.channels.fetch(config.logChannelId).catch(() => null);
       if (logCh) {
         const botMod = { id: message.client.user.id, tag: 'AutoMod ⚙️', user: { tag: 'AutoMod ⚙️' } };
-        await logCh.send({ embeds: [buildModEmbed('mute', botMod, member, `[AutoMod] ${reason}`, { duration: '5 minutes' })] }).catch(() => {});
+        const embed = buildModEmbed('mute', botMod, member, `[AutoMod] ${reason}`, { duration: '5 minutes' });
+        if (message.content) {
+          embed.addFields({ name: '💬 Message supprimé', value: `\`\`\`${message.content.slice(0, 1000)}\`\`\``, inline: false });
+        }
+        await logCh.send({ embeds: [embed] }).catch(() => {});
       }
     }
   } catch (err) {

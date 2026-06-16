@@ -1,5 +1,5 @@
 // src/commands/community/ticket.js
-const { SlashCommandBuilder, PermissionFlagsBits, ChannelType, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { SlashCommandBuilder, PermissionFlagsBits, ChannelType, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, AttachmentBuilder } = require('discord.js');
 const { errorEmbed } = require('../../embeds/errorEmbed');
 const { successEmbed } = require('../../embeds/baseEmbed');
 const { ticketCloseRow, ticketPanelSelectRow } = require('../../components/buttons');
@@ -7,6 +7,27 @@ const prisma = require('../../database/prisma');
 const { COLORS } = require('../../config/constants');
 const TICKET_CATEGORIES = require('../../config/ticketCategories');
 const logger = require('../../utils/logger');
+
+async function buildTicketTranscript(channel, ticket) {
+  try {
+    const messages = await channel.messages.fetch({ limit: 100 });
+    const sorted = [...messages.values()].sort((a, b) => a.createdTimestamp - b.createdTimestamp);
+    const lines = [
+      `=== TRANSCRIPT — ${ticket.subject || ticket.category || 'Ticket'} ===`,
+      `Ouvert par : ${ticket.userId}`,
+      `Problème : ${ticket.problem || 'Non précisé'}`,
+      ``,
+      ...sorted.map(m => {
+        const time = new Date(m.createdTimestamp).toLocaleString('fr-FR');
+        const content = m.content || (m.embeds.length ? '[Embed]' : '[Pièce jointe]');
+        return `[${time}] ${m.author.tag}: ${content}`;
+      }),
+    ];
+    return lines.join('\n');
+  } catch {
+    return 'Impossible de récupérer les messages.';
+  }
+}
 
 async function sendTicketCloseDmAndLog(interaction, ticket) {
   const date = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
@@ -31,6 +52,9 @@ async function sendTicketCloseDmAndLog(interaction, ticket) {
   if (creator) await creator.user.send({ embeds: [recapEmbed] }).catch(() => {});
 
   const config = await prisma.guildConfig.findUnique({ where: { guildId: interaction.guildId } });
+  const transcriptText = await buildTicketTranscript(interaction.channel, ticket);
+  const transcriptFile = new AttachmentBuilder(Buffer.from(transcriptText, 'utf-8'), { name: `transcript-${interaction.channel.name}.txt` });
+
   if (config?.logChannelId) {
     const logCh = await interaction.guild.channels.fetch(config.logChannelId).catch(() => null);
     if (logCh) {
@@ -46,7 +70,7 @@ async function sendTicketCloseDmAndLog(interaction, ticket) {
         )
         .setFooter({ text: `⚔️ WestSky • ${date}` })
         .setTimestamp();
-      await logCh.send({ embeds: [logEmbed] }).catch(() => {});
+      await logCh.send({ embeds: [logEmbed], files: [transcriptFile] }).catch(() => {});
     }
   }
 }

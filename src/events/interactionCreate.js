@@ -1,5 +1,5 @@
 // src/events/interactionCreate.js
-const { InteractionType, PermissionFlagsBits, EmbedBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, ChannelType } = require('discord.js');
+const { InteractionType, PermissionFlagsBits, EmbedBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, ChannelType, AttachmentBuilder } = require('discord.js');
 const logger = require('../utils/logger');
 const { errorEmbed, cooldownError } = require('../embeds/errorEmbed');
 const { checkCooldown } = require('../utils/cooldown');
@@ -341,6 +341,27 @@ async function handleAcceptRules(interaction) {
   }
 }
 
+async function buildTicketTranscript(channel, ticket) {
+  try {
+    const messages = await channel.messages.fetch({ limit: 100 });
+    const sorted = [...messages.values()].sort((a, b) => a.createdTimestamp - b.createdTimestamp);
+    const lines = [
+      `=== TRANSCRIPT — ${ticket.subject || ticket.category || 'Ticket'} ===`,
+      `Ouvert par : ${ticket.userId}`,
+      `Problème : ${ticket.problem || 'Non précisé'}`,
+      ``,
+      ...sorted.map(m => {
+        const time = new Date(m.createdTimestamp).toLocaleString('fr-FR');
+        const content = m.content || (m.embeds.length ? '[Embed]' : '[Pièce jointe]');
+        return `[${time}] ${m.author.tag}: ${content}`;
+      }),
+    ];
+    return lines.join('\n');
+  } catch {
+    return 'Impossible de récupérer les messages.';
+  }
+}
+
 async function handleTicketClose(interaction) {
   try {
     const ticket = await prisma.ticket.findUnique({ where: { channelId: interaction.channelId } });
@@ -378,8 +399,11 @@ async function handleTicketClose(interaction) {
       await creator.user.send({ embeds: [recapEmbed] }).catch(() => {});
     }
 
-    // Log dans le salon de logs
+    // Transcript + Log dans le salon de logs
     const config = await prisma.guildConfig.findUnique({ where: { guildId: interaction.guildId } });
+    const transcriptText = await buildTicketTranscript(interaction.channel, ticket);
+    const transcriptFile = new AttachmentBuilder(Buffer.from(transcriptText, 'utf-8'), { name: `transcript-${interaction.channel.name}.txt` });
+
     if (config?.logChannelId) {
       const logCh = await interaction.guild.channels.fetch(config.logChannelId).catch(() => null);
       if (logCh) {
@@ -395,7 +419,7 @@ async function handleTicketClose(interaction) {
           )
           .setFooter({ text: `⚔️ WestSky • ${date}` })
           .setTimestamp();
-        await logCh.send({ embeds: [logEmbed] }).catch(() => {});
+        await logCh.send({ embeds: [logEmbed], files: [transcriptFile] }).catch(() => {});
       }
     }
 
