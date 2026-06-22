@@ -18,8 +18,8 @@ module.exports = {
       })
       .setTitle('⚔️  Bienvenue sur WestSky')
       .setDescription(
-        '> Rejoins notre communauté et vis une aventure Minecraft unique.\n' +
-        '> Survie, PvP, événements et bien plus encore t\'attendent !\n\n' +
+        '> Rejoins notre communauté et vis une expérience **Skyblock & Gens** unique.\n' +
+        '> Construis ton île, développe tes générateurs et domine le classement !\n\n' +
         SEPARATOR
       )
       .setThumbnail(interaction.guild.iconURL({ dynamic: true, size: 256 }))
@@ -31,7 +31,7 @@ module.exports = {
         },
         {
           name: '🎮  Mode de jeu',
-          value: '```\nSurvie\n```',
+          value: '```\nSkyblock / Gens\n```',
           inline: true,
         },
         {
