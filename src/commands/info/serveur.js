@@ -65,15 +65,11 @@ module.exports = {
           inline: false,
         },
       )
-      .setImage('https://i.imgur.com/00000000.png') // Optionnel : bannière du serveur
       .setFooter({
         text: '⚔️ WestSky  •  PLAY.WESTSKY.FR  •  1.21.11',
         iconURL: interaction.guild.iconURL({ dynamic: true }),
       })
       .setTimestamp();
-
-    // Supprimer le champ image si pas de bannière définie
-    embed.data.image = undefined;
 
     const row = new ActionRowBuilder().addComponents(
       new ButtonBuilder()
