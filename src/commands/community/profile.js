@@ -1,6 +1,6 @@
 // src/commands/community/profile.js
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
-const { getProfile, xpForLevel } = require('../../services/levelService');
+const { getProfile, xpForLevel, buildXpBar } = require('../../services/levelService');
 const { getStats } = require('../../services/inviteService');
 const { COLORS } = require('../../config/constants');
 
@@ -17,25 +17,30 @@ module.exports = {
       getProfile(interaction.guildId, user.id),
       getStats(interaction.guildId, user.id),
     ]);
-    const xpNeeded = xpForLevel(levelProfile.level);
+    const xpNeeded = Math.floor(xpForLevel(levelProfile.level));
+    const xpBar = buildXpBar(levelProfile.xp, xpNeeded, 14);
     const score = inviteStats.invites - inviteStats.fake - inviteStats.left + inviteStats.bonus;
-    const date = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
     const inventory = Array.isArray(levelProfile.inventory) ? levelProfile.inventory : JSON.parse(levelProfile.inventory || '[]');
+    const joinTs = member ? Math.floor(member.joinedTimestamp / 1000) : null;
 
     const embed = new EmbedBuilder()
-      .setColor(member?.displayHexColor || COLORS.PRIMARY)
+      .setColor(member?.displayHexColor && member.displayHexColor !== '#000000' ? member.displayHexColor : COLORS.PRIMARY)
       .setTitle(`⚔️ Profil de ${user.tag}`)
       .setThumbnail(user.displayAvatarURL({ dynamic: true }))
       .addFields(
-        { name: '⭐ Niveau', value: `${levelProfile.level}`, inline: true },
-        { name: '✨ XP', value: `${levelProfile.xp} / ${Math.floor(xpNeeded)}`, inline: true },
+        { name: '⭐ Niveau', value: `**${levelProfile.level}**`, inline: true },
         { name: '🪙 Pièces d\'or', value: `${levelProfile.balance}`, inline: true },
         { name: '📊 Invitations', value: `${score}`, inline: true },
+        { name: `✨ XP — ${levelProfile.xp} / ${xpNeeded}`, value: xpBar, inline: false },
         { name: '📦 Inventaire', value: `${inventory.length} objet(s)`, inline: true },
-        { name: '📅 Rejoint le', value: member ? `<t:${Math.floor(member.joinedTimestamp / 1000)}:D>` : 'N/A', inline: true },
+        { name: '📅 Rejoint le', value: joinTs ? `<t:${joinTs}:D> (<t:${joinTs}:R>)` : 'N/A', inline: true },
       )
-      .setFooter({ text: `⚔️ WESTSKY • ${date}` })
+      .setFooter({ text: '⚔️ WestSky' })
       .setTimestamp();
+
+    if (levelProfile.minecraftPseudo) {
+      embed.addFields({ name: '🎮 Pseudo Minecraft', value: `\`${levelProfile.minecraftPseudo}\``, inline: true });
+    }
 
     await interaction.reply({ embeds: [embed] });
   },

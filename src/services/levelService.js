@@ -3,10 +3,16 @@ const { EmbedBuilder } = require('discord.js');
 const prisma = require('../database/prisma');
 const { COLORS } = require('../config/constants');
 
-const LEADERBOARD_DEBOUNCE = new Map(); // guildId -> lastRefreshTimestamp (ms)
+const LEADERBOARD_DEBOUNCE = new Map();
 
 function xpForLevel(level) {
   return 100 * Math.pow(level + 1, 1.5);
+}
+
+function buildXpBar(current, max, length = 10) {
+  const ratio = Math.min(current / Math.max(max, 1), 1);
+  const filled = Math.round(ratio * length);
+  return '`' + '█'.repeat(Math.max(0, filled)) + '░'.repeat(Math.max(0, length - filled)) + '`';
 }
 
 async function addXp(guildId, userId, amount) {
@@ -45,29 +51,28 @@ async function getLeaderboard(guildId, limit = 10) {
 
 function buildLeaderboardEmbed(entries, guildName, guildIcon) {
   const medals = ['🥇', '🥈', '🥉'];
-  const date = new Date().toLocaleDateString('fr-FR', {
-    day: '2-digit', month: '2-digit', year: 'numeric',
-    hour: '2-digit', minute: '2-digit',
-  });
   return new EmbedBuilder()
     .setColor(COLORS.PRIMARY)
     .setTitle(`📈 Classement XP — ${guildName}`)
     .setDescription(
       entries.length === 0
         ? 'Aucune donnée pour le moment.'
-        : entries.map((e, i) =>
-            `${medals[i] || `**${i + 1}.**`} <@${e.userId}> — Niveau **${e.level}** • ${e.xp} XP`
-          ).join('\n')
+        : entries.map((e, i) => {
+            const xpNext = Math.floor(xpForLevel(e.level));
+            const bar = buildXpBar(e.xp, xpNext, 8);
+            const prefix = medals[i] || `**${i + 1}.**`;
+            return `${prefix} <@${e.userId}> — **Niv. ${e.level}** • ${bar} ${e.xp}/${xpNext} XP`;
+          }).join('\n')
     )
     .setThumbnail(guildIcon || null)
-    .setFooter({ text: `⚔️ WESTSKY • ${date} • Mise à jour automatique` })
+    .setFooter({ text: '⚔️ WESTSKY • Mise à jour automatique' })
     .setTimestamp();
 }
 
 async function refreshLeaderboardMessage(client, guildId) {
   const now = Date.now();
   const last = LEADERBOARD_DEBOUNCE.get(guildId) || 0;
-  if (now - last < 120000) return; // max une fois toutes les 2 minutes
+  if (now - last < 120000) return;
   LEADERBOARD_DEBOUNCE.set(guildId, now);
 
   try {
@@ -83,8 +88,8 @@ async function refreshLeaderboardMessage(client, guildId) {
     const embed = buildLeaderboardEmbed(entries, channel.guild.name, channel.guild.iconURL({ dynamic: true }));
     await msg.edit({ embeds: [embed] }).catch(() => {});
   } catch {
-    // non-critique, on ignore silencieusement
+    // non-critique
   }
 }
 
-module.exports = { xpForLevel, addXp, getProfile, getLeaderboard, buildLeaderboardEmbed, refreshLeaderboardMessage };
+module.exports = { xpForLevel, buildXpBar, addXp, getProfile, getLeaderboard, buildLeaderboardEmbed, refreshLeaderboardMessage };

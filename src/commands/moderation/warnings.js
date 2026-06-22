@@ -1,8 +1,9 @@
 // src/commands/moderation/warnings.js
-const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder } = require('discord.js');
-const { errorEmbed } = require('../../embeds/errorEmbed');
+const { SlashCommandBuilder, PermissionFlagsBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const { getWarnings } = require('../../services/moderationService');
 const { COLORS } = require('../../config/constants');
+
+const PAGE_SIZE = 5;
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -14,19 +15,59 @@ module.exports = {
   async execute(interaction) {
     const targetUser = interaction.options.getUser('utilisateur');
     const warns = await getWarnings(interaction.guildId, targetUser.id);
-    if (warns.length === 0) {
-      return interaction.reply({ embeds: [errorEmbed('Aucun avertissement', `${targetUser.tag} n'a aucun avertissement.`)], ephemeral: true });
+
+    const totalPages = Math.max(1, Math.ceil(warns.length / PAGE_SIZE));
+    let page = 0;
+
+    function buildEmbed(p) {
+      const slice = warns.slice(p * PAGE_SIZE, (p + 1) * PAGE_SIZE);
+      const description = slice.length === 0
+        ? '✅ Aucun avertissement.'
+        : slice.map((w, i) => {
+            const num = p * PAGE_SIZE + i + 1;
+            const ts = Math.floor(new Date(w.createdAt).getTime() / 1000);
+            return `**${num}.** ${w.reason} — par <@${w.modId}> — <t:${ts}:R>\n> ID : \`${w.id}\``;
+          }).join('\n');
+
+      return new EmbedBuilder()
+        .setColor(warns.length === 0 ? COLORS.SUCCESS : COLORS.SECONDARY)
+        .setTitle(`⚠️ Avertissements — ${targetUser.tag} (${warns.length})`)
+        .setThumbnail(targetUser.displayAvatarURL({ dynamic: true }))
+        .setDescription(description)
+        .setFooter({ text: `⚔️ WestSky • Page ${p + 1}/${totalPages} • /warn remove <id> pour supprimer` })
+        .setTimestamp();
     }
-    const date = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-    const lines = warns.map((w, i) =>
-      `**${i + 1}.** ${w.reason} — par <@${w.modId}> — <t:${Math.floor(new Date(w.createdAt).getTime() / 1000)}:R>\n> ID : \`${w.id}\``
-    ).join('\n');
-    const embed = new EmbedBuilder()
-      .setColor(COLORS.SECONDARY)
-      .setTitle(`⚠️ Avertissements — ${targetUser.tag}`)
-      .setDescription(lines)
-      .setThumbnail(targetUser.displayAvatarURL({ dynamic: true }))
-      .setFooter({ text: `⚔️ WestSky • ${date} • Utilise /warn remove <id> pour supprimer` });
-    await interaction.reply({ embeds: [embed], ephemeral: true });
+
+    function buildRow(p) {
+      return new ActionRowBuilder().addComponents(
+        new ButtonBuilder().setCustomId('w_prev').setEmoji('◀️').setStyle(ButtonStyle.Secondary).setDisabled(p === 0),
+        new ButtonBuilder().setCustomId('w_page').setLabel(`${p + 1} / ${totalPages}`).setStyle(ButtonStyle.Primary).setDisabled(true),
+        new ButtonBuilder().setCustomId('w_next').setEmoji('▶️').setStyle(ButtonStyle.Secondary).setDisabled(p >= totalPages - 1),
+      );
+    }
+
+    const reply = await interaction.reply({
+      embeds: [buildEmbed(0)],
+      components: totalPages > 1 ? [buildRow(0)] : [],
+      ephemeral: true,
+      fetchReply: true,
+    });
+
+    if (totalPages <= 1) return;
+
+    const collector = reply.createMessageComponentCollector({
+      filter: i => i.user.id === interaction.user.id,
+      time: 5 * 60 * 1000,
+    });
+
+    collector.on('collect', async i => {
+      if (i.customId === 'w_prev') page = Math.max(0, page - 1);
+      if (i.customId === 'w_next') page = Math.min(totalPages - 1, page + 1);
+      await i.update({ embeds: [buildEmbed(page)], components: [buildRow(page)] });
+    });
+
+    collector.on('end', () => {
+      reply.edit({ components: [] }).catch(() => {});
+    });
   },
 };
