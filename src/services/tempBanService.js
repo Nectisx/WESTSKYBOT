@@ -129,7 +129,7 @@ async function _sendExpireLog(client, guildId, userId, originalReason) {
         { name: '🤖 Action', value: 'Débannissement automatique', inline: true },
         { name: '📝 Raison originale', value: originalReason || 'Aucune', inline: false },
       )
-      .setFooter({ text: `⚔️ WESTSKY • ${date}` })
+      .setFooter({ text: `⚔️ WestSky • ${date}` })
       .setTimestamp();
 
     await logCh.send({ embeds: [embed] }).catch(() => {});

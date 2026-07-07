@@ -94,7 +94,12 @@ module.exports = {
         .setRequired(false)
       )
     )
-    .addSubcommand(sub => sub.setName('close').setDescription('Fermer le ticket actuel')),
+    .addSubcommand(sub => sub.setName('close').setDescription('Fermer le ticket actuel'))
+    .addSubcommand(sub => sub
+      .setName('add')
+      .setDescription('Ajouter un membre au ticket actuel')
+      .addUserOption(opt => opt.setName('utilisateur').setDescription('Membre à ajouter').setRequired(true))
+    ),
 
   async execute(interaction) {
     const sub = interaction.options.getSubcommand();
@@ -119,7 +124,7 @@ module.exports = {
           '**Catégories disponibles :**\n' +
           TICKET_CATEGORIES.map(c => `${c.emoji} **${c.label.split(' ').slice(1).join(' ')}** — ${c.description}`).join('\n')
         )
-        .setFooter({ text: `⚔️ WESTSKY • ${date}` })
+        .setFooter({ text: `⚔️ WestSky • ${date}` })
         .setTimestamp();
 
       const row = ticketPanelSelectRow();
@@ -140,6 +145,27 @@ module.exports = {
       } catch (err) {
         logger.error(`[Ticket setup] ${err.message}`);
         await interaction.editReply({ content: `❌ Erreur lors de la création du panneau : ${err.message}` });
+      }
+      return;
+    }
+
+    if (sub === 'add') {
+      const ticket = await prisma.ticket.findUnique({ where: { channelId: interaction.channelId } });
+      if (!ticket) return interaction.reply({ embeds: [errorEmbed('Pas un ticket', 'Ce salon n\'est pas un ticket.')], ephemeral: true });
+
+      const canManage = ticket.userId === interaction.user.id || interaction.member.permissions.has(PermissionFlagsBits.ManageChannels);
+      if (!canManage) return interaction.reply({ embeds: [errorEmbed('Permission manquante', 'Seul le créateur du ticket ou le staff peut ajouter un membre.')], ephemeral: true });
+
+      const userToAdd = interaction.options.getUser('utilisateur');
+      try {
+        await interaction.channel.permissionOverwrites.edit(userToAdd.id, {
+          ViewChannel: true,
+          SendMessages: true,
+        });
+        await interaction.reply({ embeds: [successEmbed('Membre ajouté', `${userToAdd} a été ajouté au ticket.`)] });
+      } catch (err) {
+        logger.error(`[Ticket add] ${err.message}`);
+        await interaction.reply({ embeds: [errorEmbed('Erreur', `Impossible d'ajouter ${userToAdd} : ${err.message}`)], ephemeral: true });
       }
       return;
     }

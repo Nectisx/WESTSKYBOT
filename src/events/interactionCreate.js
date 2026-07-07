@@ -44,8 +44,8 @@ module.exports = {
       try {
         await command.execute(interaction, client);
       } catch (err) {
-        logger.error(`Erreur commande ${interaction.commandName}: ${err.message}`);
-        const errEmbed = errorEmbed('Erreur inattendue', 'Une erreur est survenue lors de l\'exécution de la commande.');
+        logger.error(`Erreur commande ${interaction.commandName}: ${err.stack || err.message}`);
+        const errEmbed = errorEmbed('Erreur inattendue', 'Une erreur est survenue lors de l\'exécution de la commande. Réessaie — si le problème persiste, préviens le staff.');
         if (interaction.replied || interaction.deferred) {
           await interaction.followUp({ embeds: [errEmbed], ephemeral: true }).catch(() => {});
         } else {
@@ -91,7 +91,7 @@ module.exports = {
         const parts = rest.split('_');
         const currentPage = parseInt(parts.pop(), 10) || 0;
         const giveawayId = parts.join('_');
-        await handleGiveawayParticipants(interaction, giveawayId, Math.max(0, currentPage - 1));
+        await handleGiveawayParticipants(interaction, giveawayId, Math.max(0, currentPage - 1), true);
         return;
       }
 
@@ -100,7 +100,20 @@ module.exports = {
         const parts = rest.split('_');
         const currentPage = parseInt(parts.pop(), 10) || 0;
         const giveawayId = parts.join('_');
-        await handleGiveawayParticipants(interaction, giveawayId, currentPage + 1);
+        await handleGiveawayParticipants(interaction, giveawayId, currentPage + 1, true);
+        return;
+      }
+
+      if (customId === 'copy_ip') {
+        await interaction.reply({
+          content: '📋 **Adresse IP :** `PLAY.WESTSKY.FR`\nColle-la directement dans ton client Minecraft !',
+          ephemeral: true,
+        }).catch(() => {});
+        return;
+      }
+
+      if (customId.startsWith('giveaway_reroll_')) {
+        await handleGiveawayReroll(interaction, customId.replace('giveaway_reroll_', ''), client);
         return;
       }
 
@@ -111,6 +124,11 @@ module.exports = {
 
       if (customId === 'ticket_close') {
         await handleTicketClose(interaction);
+        return;
+      }
+
+      if (customId === 'ticket_claim') {
+        await handleTicketClaim(interaction);
         return;
       }
 
@@ -234,7 +252,7 @@ async function handleGiveawayLeave(interaction, giveawayId, client) {
 async function handleGiveawayInfo(interaction, giveawayId) {
   try {
     const giveaway = await prisma.giveaway.findUnique({ where: { id: giveawayId } });
-    if (!giveaway) return interaction.reply({ content: 'Giveaway introuvable.', ephemeral: true });
+    if (!giveaway) return interaction.reply({ embeds: [errorEmbed('Introuvable', 'Ce giveaway n\'existe plus.')], ephemeral: true });
 
     const entry = await prisma.giveawayEntry.findUnique({
       where: { giveawayId_userId: { giveawayId, userId: interaction.user.id } },
@@ -253,15 +271,15 @@ async function handleGiveawayInfo(interaction, giveawayId) {
     });
   } catch (err) {
     logger.error(`handleGiveawayInfo: ${err.message}`);
-    await interaction.reply({ content: 'Erreur.', ephemeral: true }).catch(() => {});
+    await interaction.reply({ embeds: [errorEmbed('Erreur', 'Impossible de récupérer tes informations de participation.')], ephemeral: true }).catch(() => {});
   }
 }
 
-async function handleGiveawayParticipants(interaction, giveawayId, page) {
+async function handleGiveawayParticipants(interaction, giveawayId, page, isNavigation = false) {
   try {
     const giveaway = await prisma.giveaway.findUnique({ where: { id: giveawayId } });
     if (!giveaway) {
-      return interaction.reply({ content: 'Giveaway introuvable.', ephemeral: true });
+      return interaction.reply({ embeds: [errorEmbed('Introuvable', 'Ce giveaway n\'existe plus.')], ephemeral: true });
     }
 
     const total = await prisma.giveawayEntry.count({ where: { giveawayId } });
@@ -296,24 +314,46 @@ async function handleGiveawayParticipants(interaction, giveawayId, page) {
       .setTitle(`👥 Participants — ${giveaway.prize}`)
       .setDescription(list)
       .addFields({ name: '📊 Total', value: `**${total}** participant(s)`, inline: true })
-      .setFooter({ text: `⚔️ WESTSKY • ${date} • Page ${safePage + 1}/${totalPages}` })
+      .setFooter({ text: `⚔️ WestSky • ${date} • Page ${safePage + 1}/${totalPages}` })
       .setTimestamp();
 
     const navRow = participantsNavRow(giveawayId, safePage, totalPages);
 
-    if (interaction.replied || interaction.deferred) {
-      await interaction.editReply({ embeds: [embed], components: [navRow] }).catch(() => {});
+    // Navigation : mise à jour du message existant, sinon nouvelle réponse éphémère
+    if (isNavigation) {
+      await interaction.update({ embeds: [embed], components: [navRow] }).catch(() => {});
     } else {
       await interaction.reply({ embeds: [embed], components: [navRow], ephemeral: true });
     }
   } catch (err) {
     logger.error(`handleGiveawayParticipants: ${err.message}`);
     const reply = { content: 'Erreur lors du chargement des participants.', ephemeral: true };
-    if (interaction.replied || interaction.deferred) {
-      await interaction.editReply(reply).catch(() => {});
-    } else {
-      await interaction.reply(reply).catch(() => {});
+    await interaction.reply(reply).catch(() => {});
+  }
+}
+
+// Reroll via bouton — réservé au staff (Manage Guild) ou permission déléguée "giveaway"
+async function handleGiveawayReroll(interaction, giveawayId, client) {
+  try {
+    const isStaff = interaction.member.permissions.has(PermissionFlagsBits.ManageGuild)
+      || interaction.guild.ownerId === interaction.user.id
+      || await hasPermission(interaction.guildId, interaction.member, 'giveaway').catch(() => false);
+    if (!isStaff) {
+      return interaction.reply({ embeds: [errorEmbed('Permission refusée', 'Seul le staff peut relancer un tirage.')], ephemeral: true });
     }
+
+    await interaction.deferReply({ ephemeral: true });
+    const winners = await client.giveawayManager.reroll(giveawayId, 1);
+    await interaction.editReply({
+      content: winners.length > 0
+        ? `🎲 Nouveau gagnant tiré : <@${winners[0]}>`
+        : '❌ Aucun participant, impossible de retirer un gagnant.',
+    });
+  } catch (err) {
+    logger.error(`handleGiveawayReroll: ${err.message}`);
+    const msg = { embeds: [errorEmbed('Reroll impossible', err.message)], ephemeral: true };
+    if (interaction.deferred) await interaction.editReply(msg).catch(() => {});
+    else await interaction.reply(msg).catch(() => {});
   }
 }
 
@@ -365,12 +405,12 @@ async function buildTicketTranscript(channel, ticket) {
 async function handleTicketClose(interaction) {
   try {
     const ticket = await prisma.ticket.findUnique({ where: { channelId: interaction.channelId } });
-    if (!ticket) return interaction.reply({ content: 'Ticket introuvable.', ephemeral: true });
+    if (!ticket) return interaction.reply({ embeds: [errorEmbed('Introuvable', 'Ce salon n\'est pas un ticket enregistré.')], ephemeral: true });
 
     const canClose = ticket.userId === interaction.user.id
       || interaction.member.permissions.has(PermissionFlagsBits.ManageChannels);
     if (!canClose) {
-      return interaction.reply({ content: '❌ Tu ne peux pas fermer ce ticket.', ephemeral: true });
+      return interaction.reply({ embeds: [errorEmbed('Permission refusée', 'Seul le créateur du ticket ou le staff peut le fermer.')], ephemeral: true });
     }
 
     await prisma.ticket.update({ where: { channelId: interaction.channelId }, data: { status: 'closed', closedAt: new Date() } });
@@ -427,7 +467,32 @@ async function handleTicketClose(interaction) {
     setTimeout(() => interaction.channel.delete().catch(() => {}), 5000);
   } catch (err) {
     logger.error(`handleTicketClose: ${err.message}`);
-    await interaction.reply({ content: 'Erreur fermeture ticket.', ephemeral: true }).catch(() => {});
+    await interaction.reply({ embeds: [errorEmbed('Erreur', 'Impossible de fermer le ticket. Réessaie ou contacte un administrateur.')], ephemeral: true }).catch(() => {});
+  }
+}
+
+// Bouton "Réclamer" — un membre du staff prend en charge le ticket
+async function handleTicketClaim(interaction) {
+  try {
+    if (!interaction.member.permissions.has(PermissionFlagsBits.ManageChannels)) {
+      return interaction.reply({ embeds: [errorEmbed('Permission refusée', 'Seul le staff peut réclamer un ticket.')], ephemeral: true });
+    }
+    const ticket = await prisma.ticket.findUnique({ where: { channelId: interaction.channelId } });
+    if (!ticket) {
+      return interaction.reply({ embeds: [errorEmbed('Introuvable', 'Ce salon n\'est pas un ticket enregistré.')], ephemeral: true });
+    }
+
+    const embed = new EmbedBuilder()
+      .setColor(COLORS.SUCCESS)
+      .setDescription(`🙋 ${interaction.user} prend en charge ce ticket.`)
+      .setTimestamp();
+    await interaction.reply({ embeds: [embed] });
+
+    // Renomme le salon pour indiquer la prise en charge
+    await interaction.channel.setName(`✋-${interaction.channel.name.replace(/^✋-/, '')}`.slice(0, 100)).catch(() => {});
+  } catch (err) {
+    logger.error(`handleTicketClaim: ${err.message}`);
+    await interaction.reply({ embeds: [errorEmbed('Erreur', 'Impossible de réclamer ce ticket.')], ephemeral: true }).catch(() => {});
   }
 }
 
@@ -542,7 +607,7 @@ async function handleTicketModal(interaction, client) {
         { name: '📋 Problème', value: problem, inline: false },
         { name: '📸 Preuve', value: hasProof, inline: true },
       )
-      .setFooter({ text: `⚔️ WESTSKY • ${date}` })
+      .setFooter({ text: `⚔️ WestSky • ${date}` })
       .setTimestamp();
 
     const closeRow = ticketCloseRow();

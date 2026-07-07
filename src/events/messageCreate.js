@@ -10,6 +10,14 @@ const prisma = require('../database/prisma');
 const XP_PER_MESSAGE = 10;
 const XP_COOLDOWN = new Map();
 
+// Purge périodique des entrées expirées (évite une croissance mémoire illimitée)
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, ts] of XP_COOLDOWN) {
+    if (now - ts > 60000) XP_COOLDOWN.delete(key);
+  }
+}, 10 * 60 * 1000).unref();
+
 module.exports = {
   name: 'messageCreate',
   once: false,

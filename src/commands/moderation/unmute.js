@@ -2,9 +2,7 @@
 const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
 const { errorEmbed, permissionError } = require('../../embeds/errorEmbed');
 const { successEmbed } = require('../../embeds/baseEmbed');
-const { addModLog } = require('../../services/moderationService');
-const { buildModEmbed } = require('../../embeds/moderationEmbed');
-const prisma = require('../../database/prisma');
+const { addModLog, sendModLog } = require('../../services/moderationService');
 const logger = require('../../utils/logger');
 
 module.exports = {
@@ -29,12 +27,7 @@ module.exports = {
       await target.timeout(null, raison);
       await addModLog(interaction.guildId, targetUser.id, interaction.user.id, 'unmute', raison);
       await interaction.reply({ embeds: [successEmbed(`🔊 ${targetUser.username} démuté`, `**Raison :** ${raison}`)] });
-
-      const config = await prisma.guildConfig.findUnique({ where: { guildId: interaction.guildId } });
-      if (config?.logChannelId) {
-        const logCh = await interaction.guild.channels.fetch(config.logChannelId).catch(() => null);
-        if (logCh) await logCh.send({ embeds: [buildModEmbed('unmute', interaction.member, target, raison)] }).catch(() => {});
-      }
+      await sendModLog(interaction.guild, 'unmute', interaction.member, target, raison);
     } catch (err) {
       logger.error(`unmute: ${err.message}`);
       await interaction.reply({ embeds: [errorEmbed('Erreur', err.message)], ephemeral: true });

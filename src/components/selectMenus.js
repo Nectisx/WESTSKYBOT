@@ -12,7 +12,6 @@ function menuSelectRow() {
         { label: '👋 Bienvenue', description: 'Configuration bienvenue', value: 'welcome', emoji: '👋' },
         { label: '📊 Invitations', description: 'Suivi des invitations', value: 'invites', emoji: '📊' },
         { label: '📜 Règlement', description: 'Système de règlement', value: 'reglement', emoji: '📜' },
-        { label: '🎵 Musique', description: 'Lecteur musical', value: 'music', emoji: '🎵' },
         { label: '⚙️ Administration', description: 'Outils admin avancés', value: 'admin', emoji: '⚙️' },
         { label: '📈 Communauté', description: 'Niveaux, tickets, sondages', value: 'community', emoji: '📈' },
       ])

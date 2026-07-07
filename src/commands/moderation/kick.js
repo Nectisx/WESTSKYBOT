@@ -3,9 +3,8 @@ const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
 const { errorEmbed, permissionError, hierarchyError, botTargetError } = require('../../embeds/errorEmbed');
 const { successEmbed } = require('../../embeds/baseEmbed');
 const { canModerate } = require('../../utils/permissions');
-const { addModLog } = require('../../services/moderationService');
-const { buildModEmbed } = require('../../embeds/moderationEmbed');
-const prisma = require('../../database/prisma');
+const { addModLog, sendModLog } = require('../../services/moderationService');
+const { buildSanctionDM } = require('../../embeds/moderationEmbed');
 const logger = require('../../utils/logger');
 
 module.exports = {
@@ -29,16 +28,11 @@ module.exports = {
     if (!check.ok) return interaction.reply({ embeds: [hierarchyError()], ephemeral: true });
 
     try {
-      await target.user.send({ content: `👢 Tu as été expulsé du serveur **${interaction.guild.name}** pour : ${raison}` }).catch(() => {});
+      await target.user.send({ embeds: [buildSanctionDM('kick', interaction.guild, raison, interaction.user)] }).catch(() => {});
       await target.kick(raison);
       await addModLog(interaction.guildId, targetUser.id, interaction.user.id, 'kick', raison);
       await interaction.reply({ embeds: [successEmbed(`${targetUser.tag} expulsé`, `**Raison :** ${raison}`)] });
-
-      const config = await prisma.guildConfig.findUnique({ where: { guildId: interaction.guildId } });
-      if (config?.logChannelId) {
-        const logCh = await interaction.guild.channels.fetch(config.logChannelId).catch(() => null);
-        if (logCh) await logCh.send({ embeds: [buildModEmbed('kick', interaction.member, target, raison)] }).catch(() => {});
-      }
+      await sendModLog(interaction.guild, 'kick', interaction.member, target, raison);
     } catch (err) {
       logger.error(`kick: ${err.message}`);
       await interaction.reply({ embeds: [errorEmbed('Erreur', err.message)], ephemeral: true });

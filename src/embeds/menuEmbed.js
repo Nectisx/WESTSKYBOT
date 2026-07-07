@@ -110,13 +110,13 @@ function buildMainMenuEmbed() {
   });
   return new EmbedBuilder()
     .setColor(COLORS.PRIMARY)
-    .setTitle('⚔️ WESTSKY — Menu Principal')
+    .setTitle('⚔️ WestSky — Menu Principal')
     .setDescription(
-      'Bienvenue dans le panneau de commande du **WESTSKY** !\n\n' +
+      'Bienvenue dans le panneau de commande de **WestSky** !\n\n' +
       'Utilise le menu déroulant ci-dessous pour explorer les différentes catégories de commandes.\n\n' +
       Object.values(categories).map(c => `${c.label}`).join(' • ')
     )
-    .setFooter({ text: `⚔️ WESTSKY • ${date}` })
+    .setFooter({ text: `⚔️ WestSky • ${date}` })
     .setTimestamp();
 }
 
@@ -138,7 +138,7 @@ function buildCategoryEmbed(categoryKey) {
       },
       { name: '🔐 Permissions requises', value: cat.perms },
     )
-    .setFooter({ text: `⚔️ WESTSKY • ${date}` })
+    .setFooter({ text: `⚔️ WestSky • ${date}` })
     .setTimestamp();
 }
 

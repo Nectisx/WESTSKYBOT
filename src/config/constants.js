@@ -40,7 +40,6 @@ module.exports = {
   },
   COOLDOWNS: {
     DEFAULT:    3000,
-    MUSIC:      2000,
     MODERATION: 5000,
     GIVEAWAY:   10000,
     ECONOMY:    86400000,
@@ -48,8 +47,6 @@ module.exports = {
   LIMITS: {
     PURGE_MAX:        100,
     GIVEAWAY_WINNERS: 99,
-    QUEUE_MAX:        50,
-    VOLUME_MAX:       200,
     DMALL_DELAY:      1500,
     WARN_BEFORE_BAN:  3,
   },

@@ -2,11 +2,12 @@
 const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
 const { errorEmbed, permissionError, botTargetError } = require('../../embeds/errorEmbed');
 const { successEmbed } = require('../../embeds/baseEmbed');
-const { buildModEmbed } = require('../../embeds/moderationEmbed');
-const { addWarning, getWarnings, deleteWarning } = require('../../services/moderationService');
+const { buildSanctionDM } = require('../../embeds/moderationEmbed');
+const { addWarning, getWarnings, deleteWarning, addModLog, sendModLog } = require('../../services/moderationService');
 const { LIMITS } = require('../../config/constants');
-const prisma = require('../../database/prisma');
 const logger = require('../../utils/logger');
+
+const AUTO_TIMEOUT_MS = 60 * 60 * 1000; // 1 heure au 3e avertissement
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -42,19 +43,26 @@ module.exports = {
       try {
         await addWarning(interaction.guildId, targetUser.id, interaction.user.id, raison);
         const warnings = await getWarnings(interaction.guildId, targetUser.id);
+
         await targetUser.send({
-          content: `⚠️ Tu as reçu un avertissement sur **${interaction.guild.name}** pour : ${raison}\n**Total : ${warnings.length} avertissement(s)**`,
+          embeds: [buildSanctionDM('warn', interaction.guild, raison, interaction.user, { warnCount: warnings.length })],
         }).catch(() => {});
-        await interaction.reply({ embeds: [successEmbed(`${targetUser.tag} averti`, `**Raison :** ${raison}\n**Total avertissements :** ${warnings.length}`)] });
 
+        await interaction.reply({ embeds: [successEmbed(`${targetUser.tag} averti`, `**Raison :** ${raison}\n**Total avertissements :** ${warnings.length}/${LIMITS.WARN_BEFORE_BAN}`)] });
+        await sendModLog(interaction.guild, 'warn', interaction.member, target, raison, { count: warnings.length });
+
+        // Sanction automatique : timeout 1h au 3e avertissement
         if (warnings.length >= LIMITS.WARN_BEFORE_BAN) {
-          await interaction.followUp({ content: `⚠️ Ce membre a atteint **${warnings.length}** avertissements !`, ephemeral: true });
-        }
-
-        const config = await prisma.guildConfig.findUnique({ where: { guildId: interaction.guildId } });
-        if (config?.logChannelId) {
-          const logCh = await interaction.guild.channels.fetch(config.logChannelId).catch(() => null);
-          if (logCh) await logCh.send({ embeds: [buildModEmbed('warn', interaction.member, target, raison, { count: warnings.length })] }).catch(() => {});
+          const autoReason = `${warnings.length} avertissements atteints`;
+          await target.timeout(AUTO_TIMEOUT_MS, autoReason).catch(() => null);
+          await addModLog(interaction.guildId, targetUser.id, interaction.client.user.id, 'timeout', `[Auto] ${autoReason}`, 3600);
+          await sendModLog(interaction.guild, 'timeout', { id: interaction.client.user.id, tag: 'AutoMod ⚙️' }, target, `[Auto] ${autoReason}`, { duration: '1 heure' });
+          await targetUser.send({
+            embeds: [buildSanctionDM('timeout', interaction.guild, autoReason, { tag: 'AutoMod ⚙️' }, { duration: '1 heure' })],
+          }).catch(() => {});
+          await interaction.followUp({
+            content: `⏰ **${targetUser.tag}** a atteint **${warnings.length}** avertissements → timeout automatique d'**1 heure** appliqué.`,
+          });
         }
       } catch (err) {
         logger.error(`warn add: ${err.message}`);

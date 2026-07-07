@@ -3,7 +3,8 @@ const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
 const { errorEmbed, permissionError, hierarchyError, botTargetError } = require('../../embeds/errorEmbed');
 const { successEmbed } = require('../../embeds/baseEmbed');
 const { canModerate } = require('../../utils/permissions');
-const { addModLog } = require('../../services/moderationService');
+const { addModLog, sendModLog } = require('../../services/moderationService');
+const { buildSanctionDM } = require('../../embeds/moderationEmbed');
 const logger = require('../../utils/logger');
 
 module.exports = {
@@ -34,19 +35,13 @@ module.exports = {
     if (!check.ok) return interaction.reply({ embeds: [hierarchyError()], ephemeral: true });
 
     try {
-      await target.user.send({ content: `🔨 Tu as été banni du serveur **${interaction.guild.name}** pour : ${raison}` }).catch(() => {});
+      await target.user.send({ embeds: [buildSanctionDM('ban', interaction.guild, raison, interaction.user)] }).catch(() => {});
       await interaction.guild.members.ban(targetUser.id, { reason: raison, deleteMessageSeconds: jours * 86400 });
       await addModLog(interaction.guildId, targetUser.id, interaction.user.id, 'ban', raison);
 
       await interaction.reply({ embeds: [successEmbed(`${targetUser.tag} banni`, `**Raison :** ${raison}\n**Messages supprimés :** ${jours} jour(s)`)] });
 
-      const prisma = require('../../database/prisma');
-      const config = await prisma.guildConfig.findUnique({ where: { guildId: interaction.guildId } });
-      if (config?.logChannelId) {
-        const { buildModEmbed } = require('../../embeds/moderationEmbed');
-        const logCh = await interaction.guild.channels.fetch(config.logChannelId).catch(() => null);
-        if (logCh) await logCh.send({ embeds: [buildModEmbed('ban', interaction.member, target, raison)] }).catch(() => {});
-      }
+      await sendModLog(interaction.guild, 'ban', interaction.member, target, raison);
     } catch (err) {
       logger.error(`ban: ${err.message}`);
       await interaction.reply({ embeds: [errorEmbed('Erreur', `Impossible de bannir : ${err.message}`)], ephemeral: true });

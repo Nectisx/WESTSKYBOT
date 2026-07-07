@@ -4,7 +4,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -90,6 +90,8 @@ model InviteRecord {
   joinedAt  DateTime  @default(now())
   leftAt    DateTime?
   fake      Boolean   @default(false)
+
+  @@index([guildId, inviteeId])
 }
 
 model ModLog {
@@ -102,6 +104,8 @@ model ModLog {
   duration  Int?
   active    Boolean  @default(true)
   createdAt DateTime @default(now())
+
+  @@index([guildId, userId])
 }
 
 model Warning {
@@ -111,6 +115,8 @@ model Warning {
   modId     String
   reason    String
   createdAt DateTime @default(now())
+
+  @@index([guildId, userId])
 }
 
 model UserProfile {

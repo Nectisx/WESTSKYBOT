@@ -1,5 +1,5 @@
 // src/giveaways/GiveawayManager.js
-const { EmbedBuilder } = require('discord.js');
+const { ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const prisma = require('../database/prisma');
 const logger = require('../utils/logger');
 const { buildGiveawayEmbed, buildGiveawayEndedEmbed } = require('../embeds/giveawayEmbed');
@@ -80,7 +80,7 @@ class GiveawayManager {
       } catch (err) {
         logger.error(`Erreur updater giveaway ${giveaway.id}: ${err.message}`);
       }
-    }, 30000);
+    }, 60000); // 60 s — le compte à rebours est géré par le timestamp Discord, l'updater ne sert qu'au compteur de participants
     this.updaters.set(giveaway.id, interval);
   }
 
@@ -110,8 +110,17 @@ class GiveawayManager {
     }
 
     const winnerMentions = winners.map(w => `<@${w}>`).join(', ');
+    const rerollRow = new ActionRowBuilder().addComponents(
+      new ButtonBuilder()
+        .setCustomId(`giveaway_reroll_${giveaway.id}`)
+        .setLabel('🎲 Reroll (staff)')
+        .setStyle(ButtonStyle.Secondary),
+    );
     await channel.send({
-      content: `${winnerMentions} ${winners.length > 0 ? `🎉 Félicitations ! Tu as gagné **${giveaway.prize}** !` : `Personne n'a participé, pas de gagnant pour **${giveaway.prize}**.`}`,
+      content: winners.length > 0
+        ? `🎉 ${winnerMentions} — Félicitations, tu remportes **${giveaway.prize}** !\n📩 Contacte <@${giveaway.hostId}> pour récupérer ton lot.`
+        : `😢 Personne n'a participé au giveaway **${giveaway.prize}** de <@${giveaway.hostId}> — aucun gagnant.`,
+      components: [rerollRow],
     }).catch(() => {});
 
     logger.info(`Giveaway terminé: ${giveawayId}, gagnants: ${winners.join(', ')}`);

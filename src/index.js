@@ -30,10 +30,10 @@ loadCommands(client);
 loadEvents(client);
 
 process.on('unhandledRejection', (reason) => {
-  logger.error(`Rejet non géré: ${reason?.message || reason}`);
+  logger.error(`Rejet non géré: ${reason?.stack || reason?.message || reason}`);
 });
 process.on('uncaughtException', (err) => {
-  logger.error(`Exception non capturée: ${err.message}`);
+  logger.error(`Exception non capturée: ${err.stack || err.message}`);
   process.exit(1);
 });
 

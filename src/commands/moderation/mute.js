@@ -3,10 +3,9 @@ const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
 const { errorEmbed, permissionError, hierarchyError, botTargetError } = require('../../embeds/errorEmbed');
 const { successEmbed } = require('../../embeds/baseEmbed');
 const { canModerate } = require('../../utils/permissions');
-const { addModLog } = require('../../services/moderationService');
+const { addModLog, sendModLog } = require('../../services/moderationService');
 const { parseTime, formatDuration } = require('../../utils/timeParser');
-const { buildModEmbed } = require('../../embeds/moderationEmbed');
-const prisma = require('../../database/prisma');
+const { buildSanctionDM } = require('../../embeds/moderationEmbed');
 const logger = require('../../utils/logger');
 
 module.exports = {
@@ -40,13 +39,9 @@ module.exports = {
     try {
       await target.timeout(duration * 1000, raison);
       await addModLog(interaction.guildId, targetUser.id, interaction.user.id, 'mute', raison, duration);
+      await target.user.send({ embeds: [buildSanctionDM('mute', interaction.guild, raison, interaction.user, { duration: formatDuration(duration) })] }).catch(() => {});
       await interaction.reply({ embeds: [successEmbed(`🔇 ${targetUser.username} muté`, `**Durée :** ${formatDuration(duration)}\n**Raison :** ${raison}`)] });
-
-      const config = await prisma.guildConfig.findUnique({ where: { guildId: interaction.guildId } });
-      if (config?.logChannelId) {
-        const logCh = await interaction.guild.channels.fetch(config.logChannelId).catch(() => null);
-        if (logCh) await logCh.send({ embeds: [buildModEmbed('mute', interaction.member, target, raison, { duration: formatDuration(duration) })] }).catch(() => {});
-      }
+      await sendModLog(interaction.guild, 'mute', interaction.member, target, raison, { duration: formatDuration(duration) });
     } catch (err) {
       logger.error(`mute: ${err.message}`);
       await interaction.reply({ embeds: [errorEmbed('Erreur', err.message)], ephemeral: true });

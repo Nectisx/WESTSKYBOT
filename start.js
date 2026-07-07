@@ -1,4 +1,7 @@
-process.env.DATABASE_URL = process.env.DATABASE_URL || 'file:./data.db';
+if (!process.env.DATABASE_URL) {
+  console.error('❌ DATABASE_URL manquante — configure une base PostgreSQL (Railway : Add Service → PostgreSQL).');
+  process.exit(1);
+}
 
 const { execSync } = require('child_process');
 

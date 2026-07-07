@@ -1,18 +1,11 @@
 // src/embeds/errorEmbed.js
-const { EmbedBuilder } = require('discord.js');
+const { createEmbed } = require('./baseEmbed');
 const { COLORS } = require('../config/constants');
 
 function errorEmbed(title, description) {
-  const date = new Date().toLocaleDateString('fr-FR', {
-    day: '2-digit', month: '2-digit', year: 'numeric',
-    hour: '2-digit', minute: '2-digit',
-  });
-  return new EmbedBuilder()
-    .setColor(COLORS.DANGER)
+  return createEmbed(COLORS.DANGER)
     .setTitle(`❌ ${title}`)
-    .setDescription(description)
-    .setFooter({ text: `⚔️ WESTSKY • ${date}` })
-    .setTimestamp();
+    .setDescription(description);
 }
 
 function permissionError(missing) {

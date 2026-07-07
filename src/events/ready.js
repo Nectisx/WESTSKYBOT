@@ -53,11 +53,6 @@ module.exports = {
 
     client.user.setActivity('PLAY.WESTSKY.FR', { type: ActivityType.Playing });
 
-    // Renommer le bot et mettre à jour la bio si nécessaire
-    if (client.user.username !== 'WestSky') {
-      client.user.setUsername('WestSky').catch(err => logger.warn(`Rename bot: ${err.message}`));
-    }
-
     // Déploiement automatique des slash commands
     await deployCommands(client);
 

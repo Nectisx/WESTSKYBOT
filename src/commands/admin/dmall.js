@@ -40,7 +40,7 @@ module.exports = {
     const filter = i => i.user.id === interaction.user.id;
     let btn;
     try {
-      btn = await reply.awaitMessageComponent({ filter, time: 15000 });
+      btn = await reply.awaitMessageComponent({ filter, time: 60000 });
     } catch {
       return interaction.editReply({ embeds: [errorEmbed('Timeout', 'Délai dépassé.')], components: [] });
     }
@@ -65,7 +65,7 @@ module.exports = {
             .setTitle(`📩 Message de ${interaction.guild.name}`)
             .setDescription(message)
             .setThumbnail(interaction.guild.iconURL({ dynamic: true }))
-            .setFooter({ text: `⚔️ WESTSKY • ${date}` });
+            .setFooter({ text: `⚔️ WestSky • ${date}` });
           await m.send({ embeds: [dmEmbed] });
         } else {
           await m.send({ content: message });
@@ -85,18 +85,23 @@ module.exports = {
       await new Promise(r => setTimeout(r, LIMITS.DMALL_DELAY));
     }
 
-    await interaction.editReply({
-      embeds: [new EmbedBuilder()
-        .setColor(COLORS.SUCCESS)
-        .setTitle('📩 Envoi terminé')
-        .addFields(
-          { name: '✅ Envoyés', value: `${sent}`, inline: true },
-          { name: '❌ Échoués (DMs fermés)', value: `${failed}`, inline: true },
-          { name: '⏭️ Ignorés (bots)', value: `${interaction.guild.members.cache.size - total - (roleFilter ? 0 : 0)}`, inline: true },
-        )
-        .setFooter({ text: `⚔️ WESTSKY • ${date}` })
-      ],
-    });
+    const botCount = interaction.guild.members.cache.filter(m => m.user.bot).size;
+    const finalEmbed = new EmbedBuilder()
+      .setColor(COLORS.SUCCESS)
+      .setTitle('📩 Envoi terminé')
+      .addFields(
+        { name: '✅ Envoyés', value: `${sent}`, inline: true },
+        { name: '❌ Échoués (DMs fermés)', value: `${failed}`, inline: true },
+        { name: '🤖 Bots ignorés', value: `${botCount}`, inline: true },
+      )
+      .setFooter({ text: `⚔️ WestSky • ${date}` });
+
+    // Le token d'interaction expire après 15 min : fallback dans le salon si besoin
+    try {
+      await interaction.editReply({ embeds: [finalEmbed] });
+    } catch {
+      await interaction.channel.send({ content: `${interaction.user}`, embeds: [finalEmbed] }).catch(() => {});
+    }
     logger.info(`dmall: ${sent} envoyés, ${failed} échoués par ${interaction.user.tag}`);
   },
 };

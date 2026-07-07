@@ -1,7 +1,6 @@
 // src/embeds/giveawayEmbed.js
 const { EmbedBuilder } = require('discord.js');
 const { COLORS, EMOJIS } = require('../config/constants');
-const { formatTimeRemaining } = require('../utils/timeParser');
 
 function buildGiveawayEmbed(giveaway, entriesCount = 0, userTickets = null) {
   const date = new Date().toLocaleDateString('fr-FR', {
@@ -9,7 +8,9 @@ function buildGiveawayEmbed(giveaway, entriesCount = 0, userTickets = null) {
     hour: '2-digit', minute: '2-digit',
   });
 
-  const timeLeft = formatTimeRemaining(new Date(giveaway.endsAt));
+  // Timestamp Discord dynamique : "dans 2 heures" mis à jour automatiquement côté client
+  const endTs = Math.floor(new Date(giveaway.endsAt).getTime() / 1000);
+  const timeLeft = `<t:${endTs}:R> (<t:${endTs}:f>)`;
   const chancePercent = entriesCount > 0
     ? ((1 / entriesCount) * 100 * giveaway.winnersCount).toFixed(1)
     : '100.0';
@@ -33,7 +34,7 @@ function buildGiveawayEmbed(giveaway, entriesCount = 0, userTickets = null) {
       (giveaway.requiredRoleId ? `\n🔒 **Rôle requis :** <@&${giveaway.requiredRoleId}>\n` : '') +
       `━━━━━━━━━━━━━━━━━━━━━━━`
     )
-    .setFooter({ text: `⚔️ WESTSKY • ${date} • ID: ${giveaway.id}` })
+    .setFooter({ text: `⚔️ WestSky • ${date} • ID: ${giveaway.id}` })
     .setTimestamp(new Date(giveaway.endsAt));
 
   return embed;
@@ -53,7 +54,7 @@ function buildGiveawayEndedEmbed(giveaway, winners) {
       `👑 **${winners.length > 1 ? 'Gagnants' : 'Gagnant'} :** ${winners.length > 0 ? winners.map(w => `<@${w}>`).join(', ') : 'Aucun gagnant (pas assez de participants)'}\n` +
       `━━━━━━━━━━━━━━━━━━━━━━━`
     )
-    .setFooter({ text: `⚔️ WESTSKY • ${date}` })
+    .setFooter({ text: `⚔️ WestSky • ${date}` })
     .setTimestamp();
 }
 

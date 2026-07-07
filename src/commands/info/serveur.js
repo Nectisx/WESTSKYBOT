@@ -83,19 +83,7 @@ module.exports = {
         .setDisabled(false),
     );
 
+    // Le bouton "copy_ip" est géré globalement dans events/interactionCreate.js
     await interaction.reply({ embeds: [embed], components: [row] });
-
-    // Collecteur pour le bouton "Copier l'IP" (éphémère)
-    const collector = interaction.channel.createMessageComponentCollector({
-      filter: i => i.customId === 'copy_ip',
-      time: 120_000,
-    });
-
-    collector.on('collect', async i => {
-      await i.reply({
-        content: '📋 **Adresse IP copiée :** `PLAY.WESTSKY.FR`\nColle-la directement dans ton client Minecraft !',
-        ephemeral: true,
-      });
-    });
   },
 };

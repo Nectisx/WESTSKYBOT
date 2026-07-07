@@ -20,7 +20,7 @@ module.exports = {
       .setColor(COLORS.PRIMARY)
       .setTitle(`🖼️ Avatar de ${user.tag}`)
       .setImage(serverAvatar || globalAvatar)
-      .setFooter({ text: `⚔️ WESTSKY • ${date}` })
+      .setFooter({ text: `⚔️ WestSky • ${date}` })
       .setTimestamp();
 
     if (serverAvatar && serverAvatar !== globalAvatar) {

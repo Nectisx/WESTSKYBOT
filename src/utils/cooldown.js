@@ -22,4 +22,14 @@ function clearCooldown(commandName, userId) {
   if (userCooldowns) userCooldowns.delete(userId);
 }
 
+// Purge périodique des cooldowns expirés (évite une croissance mémoire illimitée)
+setInterval(() => {
+  const now = Date.now();
+  for (const [, userCooldowns] of cooldowns) {
+    for (const [userId, expiry] of userCooldowns) {
+      if (now >= expiry) userCooldowns.delete(userId);
+    }
+  }
+}, 10 * 60 * 1000).unref();
+
 module.exports = { checkCooldown, clearCooldown };

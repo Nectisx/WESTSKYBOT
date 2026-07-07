@@ -75,7 +75,7 @@ function buildModEmbed(action, moderator, target, reason, extra = {}) {
       { name: '🛡️ Modérateur', value: `${moderator.tag || moderator.user?.tag || 'Système'} (${moderator.id})`, inline: true },
       { name: '📝 Raison', value: reason || 'Aucune raison fournie', inline: false },
     )
-    .setFooter({ text: `⚔️ WESTSKY • ${date}` })
+    .setFooter({ text: `⚔️ WestSky • ${date}` })
     .setTimestamp();
 
   if (extra.duration) embed.addFields({ name: '⏱️ Durée', value: extra.duration, inline: true });
@@ -85,4 +85,39 @@ function buildModEmbed(action, moderator, target, reason, extra = {}) {
   return embed;
 }
 
-module.exports = { buildModEmbed };
+const SANCTION_DM = {
+  ban:     { emoji: '🔨', label: 'Tu as été banni' },
+  softban: { emoji: '🔨', label: 'Tu as été softban (messages purgés)' },
+  tempban: { emoji: '⏰🔨', label: 'Tu as été banni temporairement' },
+  kick:    { emoji: '👢', label: 'Tu as été expulsé' },
+  tempkick:{ emoji: '⏰👢', label: 'Tu as été expulsé temporairement' },
+  mute:    { emoji: '🔇', label: 'Tu as été rendu muet' },
+  timeout: { emoji: '⏰', label: 'Tu as été mis en timeout' },
+  warn:    { emoji: '⚠️', label: 'Tu as reçu un avertissement' },
+};
+
+/**
+ * Embed envoyé en DM au membre sanctionné.
+ * extra: { duration, warnCount }
+ */
+function buildSanctionDM(action, guild, reason, moderator, extra = {}) {
+  const info = SANCTION_DM[action] || { emoji: '🛡️', label: 'Tu as été sanctionné' };
+  const embed = new EmbedBuilder()
+    .setColor(COLORS.DANGER)
+    .setTitle(`${info.emoji} ${info.label}`)
+    .setThumbnail(guild.iconURL({ dynamic: true }))
+    .addFields(
+      { name: '🏰 Serveur', value: guild.name, inline: true },
+      { name: '🛡️ Modérateur', value: moderator?.tag || moderator?.user?.tag || 'Staff', inline: true },
+      { name: '📝 Raison', value: reason || 'Aucune raison fournie', inline: false },
+    )
+    .setFooter({ text: `⚔️ WestSky • ${guild.name}` })
+    .setTimestamp();
+
+  if (extra.duration) embed.addFields({ name: '⏱️ Durée', value: extra.duration, inline: true });
+  if (extra.warnCount) embed.addFields({ name: '⚠️ Total avertissements', value: `${extra.warnCount}`, inline: true });
+
+  return embed;
+}
+
+module.exports = { buildModEmbed, buildSanctionDM };

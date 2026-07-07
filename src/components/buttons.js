@@ -77,6 +77,10 @@ function acceptRulesRow() {
 function ticketCloseRow() {
   return new ActionRowBuilder().addComponents(
     new ButtonBuilder()
+      .setCustomId('ticket_claim')
+      .setLabel('🙋 Réclamer (staff)')
+      .setStyle(ButtonStyle.Primary),
+    new ButtonBuilder()
       .setCustomId('ticket_close')
       .setLabel('🔒 Fermer le ticket')
       .setStyle(ButtonStyle.Danger),

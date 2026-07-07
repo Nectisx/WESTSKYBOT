@@ -105,7 +105,7 @@ module.exports = {
         .setColor(COLORS.PRIMARY)
         .setTitle('📊 Configuration Invitations')
         .setDescription('Système de suivi des invitations actif.')
-        .setFooter({ text: `⚔️ WESTSKY • ${date}` });
+        .setFooter({ text: `⚔️ WestSky • ${date}` });
       await interaction.reply({ embeds: [embed], ephemeral: true });
     }
   },

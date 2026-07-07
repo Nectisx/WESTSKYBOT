@@ -65,7 +65,7 @@ function buildLeaderboardEmbed(entries, guildName, guildIcon) {
           }).join('\n')
     )
     .setThumbnail(guildIcon || null)
-    .setFooter({ text: '⚔️ WESTSKY • Mise à jour automatique' })
+    .setFooter({ text: '⚔️ WestSky • Mise à jour automatique' })
     .setTimestamp();
 }
 
