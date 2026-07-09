@@ -35,6 +35,8 @@ async function deployCommands(client) {
     if (guildId) {
       await rest.put(Routes.applicationGuildCommands(clientId, guildId), { body: commands });
       logger.info(`✅ ${commands.length} commande(s) déployée(s) sur le serveur (instantané)`);
+      // Purge les commandes globales fantômes (ex: anciennes versions déployées avant l'ajout de GUILD_ID)
+      await rest.put(Routes.applicationCommands(clientId), { body: [] });
     } else {
       await rest.put(Routes.applicationCommands(clientId), { body: commands });
       logger.info(`✅ ${commands.length} commande(s) déployée(s) globalement`);
