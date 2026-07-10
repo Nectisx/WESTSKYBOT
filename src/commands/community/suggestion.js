@@ -10,6 +10,7 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('suggestion')
     .setDescription('Système de suggestions')
+    .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages)
     .addSubcommand(sub => sub
       .setName('envoyer')
       .setDescription('Soumettre une suggestion')

@@ -79,6 +79,7 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('ticket')
     .setDescription('Système de tickets')
+    .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages)
     .addSubcommand(sub => sub
       .setName('setup')
       .setDescription('Créer le panneau de tickets dans un salon')

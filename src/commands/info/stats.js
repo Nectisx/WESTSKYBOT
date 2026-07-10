@@ -1,5 +1,5 @@
 // src/commands/info/stats.js
-const { SlashCommandBuilder, version: djsVersion } = require('discord.js');
+const { SlashCommandBuilder, version: djsVersion, PermissionFlagsBits } = require('discord.js');
 const { createEmbed } = require('../../embeds/baseEmbed');
 const { formatDuration } = require('../../utils/timeParser');
 const { BOT_VERSION } = require('../../config/constants');
@@ -7,7 +7,8 @@ const { BOT_VERSION } = require('../../config/constants');
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('stats')
-    .setDescription('Statistiques techniques du bot'),
+    .setDescription('Statistiques techniques du bot')
+    .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages),
 
   async execute(interaction) {
     const client = interaction.client;

@@ -1,11 +1,12 @@
 // src/commands/info/avatar.js
-const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits } = require('discord.js');
 const { COLORS } = require('../../config/constants');
 
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('avatar')
     .setDescription('Afficher l\'avatar d\'un membre')
+    .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages)
     .addUserOption(opt => opt.setName('utilisateur').setDescription('Membre cible')),
 
   async execute(interaction) {

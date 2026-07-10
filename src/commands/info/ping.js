@@ -1,11 +1,12 @@
 // src/commands/info/ping.js
-const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits } = require('discord.js');
 const { COLORS } = require('../../config/constants');
 
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('ping')
-    .setDescription('Affiche la latence du bot et de l\'API Discord'),
+    .setDescription('Affiche la latence du bot et de l\'API Discord')
+    .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages),
 
   async execute(interaction) {
     await interaction.deferReply();

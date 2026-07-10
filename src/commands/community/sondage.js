@@ -1,5 +1,5 @@
 // src/commands/community/sondage.js
-const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits } = require('discord.js');
 const { errorEmbed } = require('../../embeds/errorEmbed');
 const { COLORS } = require('../../config/constants');
 const prisma = require('../../database/prisma');
@@ -9,6 +9,7 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('sondage')
     .setDescription('Créer un sondage')
+    .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages)
     .addStringOption(opt => opt.setName('question').setDescription('Question du sondage').setRequired(true))
     .addStringOption(opt => opt.setName('option1').setDescription('Option 1').setRequired(true))
     .addStringOption(opt => opt.setName('option2').setDescription('Option 2').setRequired(true))

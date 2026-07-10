@@ -1,11 +1,12 @@
 // src/commands/info/serverinfo.js
-const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits } = require('discord.js');
 const { COLORS } = require('../../config/constants');
 
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('serverinfo')
-    .setDescription('Afficher les informations du serveur'),
+    .setDescription('Afficher les informations du serveur')
+    .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages),
 
   async execute(interaction) {
     const guild = interaction.guild;

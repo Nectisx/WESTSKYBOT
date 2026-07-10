@@ -12,6 +12,7 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('tempkick')
     .setDescription('Expulser temporairement un membre (débannissement automatique)')
+    .setDefaultMemberPermissions(PermissionFlagsBits.KickMembers)
     .addUserOption(opt => opt.setName('utilisateur').setDescription('Membre à expulser').setRequired(true))
     .addStringOption(opt => opt.setName('durée').setDescription('Durée (ex: 30m, 2h, 1j)').setRequired(true))
     .addStringOption(opt => opt.setName('raison').setDescription('Raison de l\'expulsion')),

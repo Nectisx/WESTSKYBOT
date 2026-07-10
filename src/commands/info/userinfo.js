@@ -1,11 +1,12 @@
 // src/commands/info/userinfo.js
-const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits } = require('discord.js');
 const { COLORS } = require('../../config/constants');
 
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('userinfo')
     .setDescription('Afficher les informations d\'un membre')
+    .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages)
     .addUserOption(opt => opt.setName('utilisateur').setDescription('Membre cible')),
 
   async execute(interaction) {

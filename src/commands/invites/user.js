@@ -1,5 +1,5 @@
 // src/commands/invites/user.js
-const { SlashCommandBuilder } = require('discord.js');
+const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
 const { getStats } = require('../../services/inviteService');
 const { buildInviteStatsEmbed } = require('../../embeds/inviteEmbed');
 
@@ -7,6 +7,7 @@ module.exports = {
   data: new SlashCommandBuilder()
     .setName('invites')
     .setDescription('Gérer les invitations')
+    .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages)
     .addSubcommand(sub => sub
       .setName('user')
       .setDescription('Voir les stats d\'invitation d\'un membre')

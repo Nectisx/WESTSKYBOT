@@ -1,11 +1,12 @@
 // src/commands/info/uptime.js
-const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, PermissionFlagsBits } = require('discord.js');
 const { COLORS } = require('../../config/constants');
 
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('uptime')
-    .setDescription('Temps de fonctionnement du bot depuis son dernier démarrage'),
+    .setDescription('Temps de fonctionnement du bot depuis son dernier démarrage')
+    .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages),
 
   async execute(interaction) {
     const readyAt = interaction.client.readyAt;

@@ -9,7 +9,8 @@ const STAFF_CATEGORIES = ['moderation', 'admin', 'giveaway', 'welcome', 'regleme
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('help')
-    .setDescription('Liste des commandes disponibles'),
+    .setDescription('Liste des commandes disponibles')
+    .setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages),
 
   async execute(interaction) {
     const isStaff = interaction.member.permissions.has(PermissionFlagsBits.ManageMessages);
