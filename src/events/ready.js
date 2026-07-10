@@ -29,20 +29,26 @@ async function deployCommands(client) {
 
   const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
   const clientId = client.application.id;
-  const guildId = process.env.GUILD_ID;
+  const guildId = process.env.GUILD_ID?.trim();
+
+  const guild = guildId ? client.guilds.cache.get(guildId) : null;
+  logger.info(`🔎 Serveurs du bot : ${client.guilds.cache.map(g => `${g.name} (${g.id})`).join(', ') || 'aucun'}`);
+  if (guildId && !guild) {
+    logger.error(`❌ GUILD_ID="${guildId}" ne correspond à aucun serveur où est le bot — corrige la variable GUILD_ID sur Railway.`);
+    return;
+  }
 
   try {
-    if (guildId) {
-      await rest.put(Routes.applicationGuildCommands(clientId, guildId), { body: commands });
-      logger.info(`✅ ${commands.length} commande(s) déployée(s) sur le serveur (instantané)`);
-      // Purge les commandes globales fantômes (ex: anciennes versions déployées avant l'ajout de GUILD_ID)
+    if (guild) {
+      await rest.put(Routes.applicationGuildCommands(clientId, guild.id), { body: commands });
+      logger.info(`✅ ${commands.length} commande(s) déployée(s) sur ${guild.name}`);
       await rest.put(Routes.applicationCommands(clientId), { body: [] });
     } else {
       await rest.put(Routes.applicationCommands(clientId), { body: commands });
       logger.info(`✅ ${commands.length} commande(s) déployée(s) globalement`);
     }
   } catch (err) {
-    logger.error(`❌ Erreur déploiement commandes: ${err.message}`);
+    logger.error(`❌ Erreur déploiement commandes (code ${err.code ?? '?'}): ${err.message} — si le serveur est correct ci-dessus, il faut réinviter le bot avec le scope applications.commands`);
   }
 }
 
