@@ -11,7 +11,7 @@ module.exports = {
     .setName('level')
     .setDescription('Système de niveaux')
     .addSubcommand(sub =>
-      sub.setName('voir')
+      sub.setName('level')
         .setDescription('Voir ton niveau et ton XP')
         .addUserOption(opt =>
           opt.setName('utilisateur')
@@ -31,7 +31,7 @@ module.exports = {
   async execute(interaction) {
     const sub = interaction.options.getSubcommand();
 
-    if (sub === 'voir') {
+    if (sub === 'level') {
       const user = interaction.options.getUser('utilisateur') || interaction.user;
       const profile = await getProfile(interaction.guildId, user.id);
       const xpNeeded = Math.floor(xpForLevel(profile.level));
